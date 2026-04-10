@@ -1,0 +1,121 @@
+﻿[
+  {
+    "id": 2,
+    "email": "manager@gmail.com",
+    "passwordHash": "$2b$10$cuxZip8fJWZtyfbmFJuEReSHDJqEs55cXONB3Z9heCJs0hFVez1Vy",
+    "roleId": 2,
+    "isActive": true,
+    "lastLoginAt": "2026-04-03T06:42:23.892Z",
+    "createdAt": "2026-04-02T09:03:00.842Z",
+    "updatedAt": "2026-04-03T06:47:22.615Z",
+    "role": {
+      "id": 2,
+      "name": "MANAGER",
+      "description": "Clinic Manager - Operational Oversight",
+      "createdAt": "2026-04-02T09:03:00.399Z",
+      "updatedAt": "2026-04-03T06:47:22.018Z"
+    }
+  },
+  {
+    "id": 3,
+    "email": "secretary@gmail.com",
+    "passwordHash": "$2b$10$Qit2qjhLwrQ9x8WmRLbLiO2b/rsRFW7YUxJJ9gEUIaTFkPoVqWsTK",
+    "roleId": 3,
+    "isActive": true,
+    "lastLoginAt": "2026-04-03T06:42:39.380Z",
+    "createdAt": "2026-04-02T09:03:00.952Z",
+    "updatedAt": "2026-04-03T06:47:22.732Z",
+    "role": {
+      "id": 3,
+      "name": "SECRETARY",
+      "description": "Clinic Secretary - Patient and Case Coordination",
+      "createdAt": "2026-04-02T09:03:00.402Z",
+      "updatedAt": "2026-04-03T06:47:22.022Z"
+    }
+  },
+  {
+    "id": 4,
+    "email": "dentist@gmail.com",
+    "passwordHash": "$2b$10$ms52/mNxyrYGYcKW2FAjN.hyaBb2KYU1Ey3DENtpQpCid0f3f8E0y",
+    "roleId": 4,
+    "isActive": true,
+    "lastLoginAt": "2026-04-03T06:23:45.866Z",
+    "createdAt": "2026-04-02T09:03:01.063Z",
+    "updatedAt": "2026-04-03T06:47:22.937Z",
+    "role": {
+      "id": 4,
+      "name": "DENTIST",
+      "description": "Specialist Dentist - Clinical focus",
+      "createdAt": "2026-04-02T09:03:00.405Z",
+      "updatedAt": "2026-04-03T06:47:22.026Z"
+    }
+  },
+  {
+    "id": 5,
+    "email": "assistant@gmail.com",
+    "passwordHash": "$2b$10$eSJJ42EefkXBwOfQm7QwjurYTRAz9hNW9j5/rfzZ2p430XHSVIL0C",
+    "roleId": 5,
+    "isActive": true,
+    "lastLoginAt": "2026-04-03T06:45:27.640Z",
+    "createdAt": "2026-04-02T09:03:01.174Z",
+    "updatedAt": "2026-04-03T06:47:23.045Z",
+    "role": {
+      "id": 5,
+      "name": "ASSISTANT",
+      "description": "Dental Assistant - Operational Support",
+      "createdAt": "2026-04-02T09:03:00.408Z",
+      "updatedAt": "2026-04-03T06:47:22.029Z"
+    }
+  },
+  {
+    "id": 6,
+    "email": "accountant@gmail.com",
+    "passwordHash": "$2b$10$Oq1qBj7ebNeI1beTT2/HdeFEceEL.Y4oXt1gHF.EW0mx0nQsHmI.6",
+    "roleId": 6,
+    "isActive": true,
+    "lastLoginAt": "2026-04-03T06:27:38.260Z",
+    "createdAt": "2026-04-02T09:03:01.287Z",
+    "updatedAt": "2026-04-03T06:47:23.256Z",
+    "role": {
+      "id": 6,
+      "name": "ACCOUNTANT",
+      "description": "Financial Officer - Billing and Expenses",
+      "createdAt": "2026-04-02T09:03:00.411Z",
+      "updatedAt": "2026-04-03T06:47:22.033Z"
+    }
+  },
+  {
+    "id": 7,
+    "email": "drtalal@alawidental.com",
+    "passwordHash": "$2b$10$8ulUONhuETu8GhVEfGAksOaNr8GtaFeRS9GuSlTksKk8EXSU27oMa",
+    "roleId": 1,
+    "isActive": true,
+    "lastLoginAt": "2026-04-03T06:40:48.407Z",
+    "createdAt": "2026-04-02T09:36:02.903Z",
+    "updatedAt": "2026-04-03T06:47:22.491Z",
+    "role": {
+      "id": 1,
+      "name": "ADMIN",
+      "description": "System Administrator - Full Access",
+      "createdAt": "2026-04-02T09:03:00.392Z",
+      "updatedAt": "2026-04-03T06:47:22.010Z"
+    }
+  },
+  {
+    "id": 8,
+    "email": "demoUser@gmail.com",
+    "passwordHash": "$2b$10$ZWQ0Q5gIn4r0.1.EENOA/eIdiTX4zfaprwkcGHMrJQB5PIO2kZafe",
+    "roleId": 4,
+    "isActive": true,
+    "lastLoginAt": "2026-04-02T11:20:25.546Z",
+    "createdAt": "2026-04-02T10:39:29.608Z",
+    "updatedAt": "2026-04-02T11:20:25.548Z",
+    "role": {
+      "id": 4,
+      "name": "DENTIST",
+      "description": "Specialist Dentist - Clinical focus",
+      "createdAt": "2026-04-02T09:03:00.405Z",
+      "updatedAt": "2026-04-03T06:47:22.026Z"
+    }
+  }
+]

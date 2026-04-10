@@ -1,0 +1,524 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+  ON_LEAVE
+}
+
+enum LabCaseStatus {
+  PENDING
+  PICKED_UP
+  IN_LAB
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  REFUNDED
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  CREDIT_CARD
+  ONLINE
+}
+
+enum PaymentType {
+  EXPENSE_PAYMENT
+  LABCASE_PAYMENT
+}
+
+enum ScheduleType {
+  SHIFT
+  APPOINTMENT
+  OFF_DAY
+  MEETING
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  EMERGENCY
+  UNPAID
+  MATERNITY
+  PATERNITY
+  CASUAL
+  RELATIVES_DEATH
+  HAJJ
+  MARRIAGE
+  OTHERS
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ReminderType {
+  LABCASE
+  PAYMENT
+  LEAVE
+  SCHEDULE
+  EXPENSE
+  GENERAL
+}
+
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  module    String   @db.VarChar(50) // 'VENDOR', 'DOCUMENT', etc.
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([name, module])
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────────
+// ROLE & PERMISSION
+// ─────────────────────────────────────────────
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique @db.VarChar(50)
+  description String?      @db.VarChar(200)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  permissions Permission[]
+  users       User[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id        Int     @id @default(autoincrement())
+  roleId    Int     @map("role_id")
+  module    String  @db.VarChar(50)
+  canView   Boolean @default(false) @map("can_view")
+  canCreate Boolean @default(false) @map("can_create")
+  canUpdate Boolean @default(false) @map("can_update")
+  canDelete Boolean @default(false) @map("can_delete")
+  canExport Boolean @default(false) @map("can_export")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, module])
+  @@map("permissions")
+}
+
+// ─────────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  roleId       Int?     @map("role_id")
+  role         Role?    @relation(fields: [roleId], references: [id])
+  isActive     Boolean  @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  employee          Employee?
+  createdReminders  Reminder[] @relation("CreatedReminders")
+  receivedReminders Reminder[] @relation("ReceivedReminders")
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// EMPLOYEE
+// ─────────────────────────────────────────────
+
+model Employee {
+  id               Int            @id @default(autoincrement())
+  userId           Int            @unique @map("user_id")
+  firstName        String         @map("first_name") @db.VarChar(100)
+  lastName         String         @map("last_name") @db.VarChar(100)
+  phone            String?        @db.VarChar(20)
+  dateOfBirth      DateTime?      @map("date_of_birth") @db.Date
+  gender           Gender?
+  address          String?        @db.Text
+  nationalId       String?        @unique @map("national_id") @db.VarChar(50)
+  profileImageUrl  String?        @map("profile_image_url") @db.VarChar(500)
+  jobTitle         String?        @map("job_title") @db.VarChar(100)
+  specialization   String?        @db.VarChar(200)
+  licenseNumber    String?        @map("license_number") @db.VarChar(100)
+  licenseExpiry    DateTime?      @map("license_expiry") @db.Date
+  visaExpiry       DateTime?      @map("visa_expiry") @db.Date
+  workPermitExpiry DateTime?      @map("work_permit_expiry") @db.Date
+  employmentType   EmploymentType @default(FULL_TIME) @map("employment_type")
+  status           EmployeeStatus @default(ACTIVE)
+  joiningDate      DateTime       @map("joining_date") @db.Date
+  leavingDate      DateTime?      @map("leaving_date") @db.Date
+  endDate          DateTime?      @map("end_date") @db.Date
+  basicSalary      Decimal        @default(0) @map("basic_salary") @db.Decimal(10, 2)
+  notes            String?        @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  labCases      LabCase[]
+  schedules     Schedule[]
+  leaveRequests LeaveRequest[]
+  leaveBalances LeaveBalance[]
+  documents     Document[]
+
+  @@map("employees")
+}
+
+// ─────────────────────────────────────────────
+// LABORATORY
+// ─────────────────────────────────────────────
+
+model Laboratory {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(200)
+  contactName String?  @map("contact_name") @db.VarChar(100)
+  phone       String?  @db.VarChar(20)
+  email       String?  @db.VarChar(200)
+  address     String?  @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  labCases  LabCase[]
+  documents Document[]
+
+  @@map("laboratories")
+}
+
+// ─────────────────────────────────────────────
+// LAB CASE
+// ─────────────────────────────────────────────
+
+model LabCase {
+  id              Int           @id @default(autoincrement())
+  caseNumber      String        @unique @map("case_number") @db.VarChar(50)
+  dentistId       Int           @map("dentist_id")
+  laboratoryId    Int           @map("laboratory_id")
+  patientName     String        @map("patient_name") @db.VarChar(200)
+  patientNumber   String?       @map("patient_number") @db.VarChar(50)
+  prosthesisType  String?       @map("prosthesis_type") @db.VarChar(100)
+  caseDescription String?       @map("case_description") @db.Text
+  shade           String?       @db.VarChar(50)
+  toothNumbers    String?       @map("tooth_numbers") @db.VarChar(100)
+  sentDate        DateTime?     @map("sent_date") @db.Date
+  expectedDate    DateTime?     @map("expected_date") @db.Date
+  receivedDate    DateTime?     @map("received_date") @db.Date
+  cost            Decimal       @default(0) @db.Decimal(10, 2)
+  amountPaid      Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  status          LabCaseStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  branch          String?       @db.VarChar(100)
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  dentist    Employee    @relation(fields: [dentistId], references: [id])
+  laboratory Laboratory  @relation(fields: [laboratoryId], references: [id])
+  payments   Payment[]
+  documents  Document[]
+  logs       CaseLog[]
+
+  @@map("lab_cases")
+}
+
+// ─────────────────────────────────────────────
+// CASE LOG
+// ─────────────────────────────────────────────
+
+model CaseLog {
+  id         Int      @id @default(autoincrement())
+  labCaseId  Int      @map("lab_case_id")
+  type       String   @db.VarChar(50) // Pickup, Delivery, etc
+  note       String?  @db.Text
+  createdAt  DateTime @default(now()) @map("created_at")
+  createdBy  Int      @map("created_by")
+
+  labCase    LabCase  @relation(fields: [labCaseId], references: [id], onDelete: Cascade)
+  
+  @@map("case_logs")
+}
+
+// ─────────────────────────────────────────────
+// VENDOR
+// ─────────────────────────────────────────────
+
+model Vendor {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(200)
+  categories   String?  @db.VarChar(500) // comma-separated categories
+  contactName  String?  @map("contact_name") @db.VarChar(100)
+  phone        String?  @db.VarChar(20)
+  email        String?  @db.VarChar(200)
+  address      String?  @db.Text
+  taxId        String?  @map("tax_id") @db.VarChar(50)
+  bankName     String?  @map("bank_name") @db.VarChar(100)
+  bankAccount  String?  @map("bank_account") @db.VarChar(50)
+  isActive     Boolean  @default(true) @map("is_active")
+  notes        String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  expenses  Expense[]
+  documents Document[]
+
+  @@map("vendors")
+}
+
+// ─────────────────────────────────────────────
+// EXPENSE
+// ─────────────────────────────────────────────
+
+model Expense {
+  id            Int           @id @default(autoincrement())
+  vendorId      Int           @map("vendor_id")
+  title         String        @db.VarChar(200)
+  description   String?       @db.Text
+  amount        Decimal       @db.Decimal(10, 2)
+  amountPaid    Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
+  expenseDate   DateTime      @map("expense_date") @db.Date
+  dueDate       DateTime?     @map("due_date") @db.Date
+  category      String?       @db.VarChar(100)
+  invoiceNumber String?       @map("invoice_number") @db.VarChar(100)
+  status        ExpenseStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
+  branch        String?       @db.VarChar(100)
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  payments  Payment[]
+  documents Document[]
+
+  @@map("expenses")
+}
+
+// ─────────────────────────────────────────────
+// PAYMENT
+// ─────────────────────────────────────────────
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  paymentType   PaymentType   @map("payment_type")
+  expenseId     Int?          @map("expense_id")
+  labCaseId     Int?          @map("lab_case_id")
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentDate   DateTime      @map("payment_date") @db.Date
+  paymentMethod PaymentMethod @default(CASH) @map("payment_method")
+  referenceNumber String?     @map("reference_number") @db.VarChar(100)
+  status        PaymentStatus @default(PAID)
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  expense  Expense?  @relation(fields: [expenseId], references: [id])
+  labCase  LabCase?  @relation(fields: [labCaseId], references: [id])
+  documents Document[]
+
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// SCHEDULE
+// ─────────────────────────────────────────────
+
+model Schedule {
+  id           Int          @id @default(autoincrement())
+  employeeId   Int          @map("employee_id")
+  scheduleType ScheduleType @default(SHIFT) @map("schedule_type")
+  title        String?      @db.VarChar(200)
+  startTime    DateTime     @map("start_time")
+  endTime      DateTime     @map("end_time")
+  isRecurring  Boolean      @default(false) @map("is_recurring")
+  recurrenceRule String?    @map("recurrence_rule") @db.VarChar(200)
+  notes        String?      @db.Text
+  branch       String?      @db.VarChar(100)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("schedules")
+}
+
+// ─────────────────────────────────────────────
+// LEAVE REQUEST
+// ─────────────────────────────────────────────
+
+model LeaveRequest {
+  id          Int         @id @default(autoincrement())
+  employeeId  Int         @map("employee_id")
+  leaveType   LeaveType   @map("leave_type")
+  startDate   DateTime    @map("start_date") @db.Date
+  endDate     DateTime    @map("end_date") @db.Date
+  totalDays   Int         @map("total_days")
+  reason      String?     @db.Text
+  status      LeaveStatus @default(PENDING)
+  reviewedBy  Int?        @map("reviewed_by")
+  reviewedAt  DateTime?   @map("reviewed_at")
+  reviewNotes String?     @map("review_notes") @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("leave_requests")
+}
+
+// ─────────────────────────────────────────────
+// LEAVE BALANCE
+// ─────────────────────────────────────────────
+
+model LeaveBalance {
+  id             Int       @id @default(autoincrement())
+  employeeId     Int       @map("employee_id")
+  leaveType      LeaveType @map("leave_type")
+  year           Int
+  totalAllotted  Int       @default(0) @map("total_allotted")
+  totalUsed      Int       @default(0) @map("total_used")
+  totalRemaining Int       @default(0) @map("total_remaining")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, leaveType, year])
+  @@map("leave_balances")
+}
+
+// ─────────────────────────────────────────────
+// REMINDER
+// ─────────────────────────────────────────────
+
+model Reminder {
+  id            Int          @id @default(autoincrement())
+  userId        Int          @map("user_id")
+  targetUserId  Int?         @map("target_user_id")
+  reminderType  ReminderType @default(GENERAL) @map("reminder_type")
+  title         String       @db.VarChar(200)
+  body          String?      @db.Text
+  description   String?      @db.Text
+  severity      String?      @default("info") @db.VarChar(20)
+  dueAt         DateTime     @map("due_at")
+  notifyAt      DateTime?    @map("notify_at")
+  branch        String?      @db.VarChar(100)
+  method        String?      @default("In-App") @db.VarChar(50)
+  isRead        Boolean      @default(false) @map("is_read")
+  isSent        Boolean      @default(false) @map("is_sent")
+  relatedId    Int?      @map("related_id")
+  attachmentUrl String?   @map("attachment_url") @db.VarChar(600)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  creator    User  @relation("CreatedReminders", fields: [userId], references: [id])
+  recipient  User? @relation("ReceivedReminders", fields: [targetUserId], references: [id])
+
+  @@map("reminders")
+}
+
+// ─────────────────────────────────────────────
+// DOCUMENT
+// ─────────────────────────────────────────────
+
+model Document {
+  id           Int              @id @default(autoincrement())
+  fileName     String           @map("file_name") @db.VarChar(300)
+  fileUrl      String           @map("file_url") @db.VarChar(600)
+  fileType     String?          @map("file_type") @db.VarChar(50)
+  fileSizeKb   Int?             @map("file_size_kb")
+  category     String           @default("OTHER") @db.VarChar(100)
+  title        String?          @db.VarChar(200)
+  description  String?          @db.Text
+  branch       String?          @db.VarChar(100)
+
+  // Polymorphic-style optional relations
+  vendorId     Int?             @map("vendor_id")
+  labCaseId    Int?             @map("lab_case_id")
+  expenseId    Int?             @map("expense_id")
+  paymentId    Int?             @map("payment_id")
+  employeeId   Int?             @map("employee_id")
+  laboratoryId Int?             @map("laboratory_id")
+
+  uploadedAt   DateTime         @default(now()) @map("uploaded_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  vendor     Vendor?     @relation(fields: [vendorId], references: [id])
+  labCase    LabCase?    @relation(fields: [labCaseId], references: [id])
+  expense    Expense?    @relation(fields: [expenseId], references: [id])
+  payment    Payment?    @relation(fields: [paymentId], references: [id])
+  employee   Employee?   @relation(fields: [employeeId], references: [id])
+  laboratory Laboratory? @relation(fields: [laboratoryId], references: [id])
+
+  @@map("documents")
+}
+
+// ─────────────────────────────────────────────
+// MONTHLY FINANCIAL (Manual Entries)
+// ─────────────────────────────────────────────
+
+model MonthlyFinancial {
+  id        Int      @id @default(autoincrement())
+  type      String   @db.VarChar(20) // REVENUE or SALARY
+  amount    Decimal  @db.Decimal(10, 2)
+  month     String   @db.VarChar(10) // Jan, Feb, etc.
+  year      Int
+  branch    String   @db.VarChar(100)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("monthly_financials")
+}
