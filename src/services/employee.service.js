@@ -157,7 +157,7 @@ const updateEmployee = async (id, employeeData) => {
         ...(isValidDate(dateOfBirth) && { dateOfBirth: new Date(dateOfBirth) }),
         ...(gender && { gender }),
         ...(address !== undefined && { address: address || null }),
-        ...(nationalId !== undefined && nationalId !== '' && { nationalId: nationalId || null }),
+        ...(nationalId !== undefined && { nationalId: nationalId || null }),
         ...(profileImageUrl !== undefined && { profileImageUrl: profileImageUrl || null }),
         ...(jobTitle && { jobTitle }),
         ...(specialization && { specialization }),

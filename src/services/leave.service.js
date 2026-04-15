@@ -21,7 +21,8 @@ const pivotBalances = (balances, employee) => {
     relativesDeath: { total: 3, used: 0, remaining: 3 },
     hajj: { total: 10, used: 0, remaining: 10 },
     marriage: { total: 15, used: 0, remaining: 15 },
-    others: { total: 5, used: 0, remaining: 5 }
+    others: { total: 5, used: 0, remaining: 5 },
+    maternity: { total: 60, used: 0, remaining: 60 }
   };
 
   balances.forEach(b => {
@@ -76,7 +77,7 @@ const updateEmployeeBalances = async (employeeId, editData) => {
   const eid = parseInt(employeeId);
 
   const entries = Object.entries(editData).filter(([key]) => 
-    ['annual', 'sick', 'relativesDeath', 'hajj', 'marriage', 'others'].includes(key)
+    ['annual', 'sick', 'relativesDeath', 'hajj', 'marriage', 'others', 'maternity'].includes(key)
   );
 
   return await prisma.$transaction(async (tx) => {
@@ -113,10 +114,15 @@ const updateEmployeeBalances = async (employeeId, editData) => {
 };
 
 const applyLeave = async (leaveData) => {
-  const { employeeId, branch, ...data } = leaveData;
+  const { employeeId, branch, isHalfDay, ...data } = leaveData;
   const startDate = new Date(data.startDate);
   const endDate = new Date(data.endDate);
-  const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  let totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  
+  if (isHalfDay) {
+    totalDays -= 0.5;
+  }
+  
   const year = startDate.getFullYear();
 
   // Ensure balance record exists
@@ -132,7 +138,7 @@ const applyLeave = async (leaveData) => {
 
   if (!balance) {
     // If not exists, check if it's one of our standard types to create initial record
-    const defaultAllotment = { ANNUAL: 30, SICK: 15, RELATIVES_DEATH: 3, HAJJ: 10, MARRIAGE: 15, OTHERS: 5 }[data.leaveType] || 0;
+    const defaultAllotment = { ANNUAL: 30, SICK: 15, RELATIVES_DEATH: 3, HAJJ: 10, MARRIAGE: 15, MATERNITY: 60, OTHERS: 5 }[data.leaveType] || 0;
     balance = await prisma.leaveBalance.create({
       data: {
         employeeId: parseInt(employeeId),

@@ -14,39 +14,79 @@ const getVendorById = async (id) => {
 };
 
 const createVendor = async (vendorData) => {
-  const { name, contactPerson, categories, phone, email, address, notes, taxId, bankName, bankAccount } = vendorData;
-  return await prisma.vendor.create({
-    data: {
-      name,
-      contactName: contactPerson,
-      categories: Array.isArray(categories) ? categories.join(',') : categories,
-      phone,
-      email,
-      address,
-      notes,
-      taxId,
-      bankName,
-      bankAccount
-    },
+  const { name, contactPerson, categories, phone, email, address, notes, taxId, bankName, bankAccount, documents } = vendorData;
+  
+  return await prisma.$transaction(async (tx) => {
+    const vendor = await tx.vendor.create({
+      data: {
+        name,
+        contactName: contactPerson,
+        categories: Array.isArray(categories) ? categories.join(',') : categories,
+        phone,
+        email,
+        address,
+        notes,
+        taxId,
+        bankName,
+        bankAccount
+      },
+    });
+
+    if (documents && documents.length > 0) {
+      await tx.document.createMany({
+        data: documents.map(doc => ({
+          fileName: doc.fileName || doc.title || 'Vendor Attachment',
+          fileUrl: doc.fileUrl || doc,
+          fileType: doc.fileType || 'image/jpeg',
+          fileSizeKb: doc.fileSizeKb || 0,
+          category: 'INVOICE',
+          title: doc.title || 'Vendor Attachment',
+          vendorId: vendor.id
+        }))
+      });
+    }
+
+    return vendor;
   });
 };
 
 const updateVendor = async (id, vendorData) => {
-  const { name, contactPerson, categories, phone, email, address, notes, taxId, bankName, bankAccount } = vendorData;
-  return await prisma.vendor.update({
-    where: { id: parseInt(id) },
-    data: {
-      name,
-      contactName: contactPerson,
-      categories: Array.isArray(categories) ? categories.join(',') : categories,
-      phone,
-      email,
-      address,
-      notes,
-      taxId,
-      bankName,
-      bankAccount
-    },
+  const { name, contactPerson, categories, phone, email, address, notes, taxId, bankName, bankAccount, documents } = vendorData;
+  
+  return await prisma.$transaction(async (tx) => {
+    const vendor = await tx.vendor.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        contactName: contactPerson,
+        categories: Array.isArray(categories) ? categories.join(',') : categories,
+        phone,
+        email,
+        address,
+        notes,
+        taxId,
+        bankName,
+        bankAccount
+      },
+    });
+
+    if (documents && documents.length > 0) {
+      // Filter out documents that are already linked (optional, but safer to just add new ones)
+      // For now, we assume the frontend sends NEW documents that need to be linked.
+      await tx.document.createMany({
+        data: documents.map(doc => ({
+          fileName: doc.fileName || doc.title || 'Vendor Attachment',
+          fileUrl: doc.fileUrl || doc,
+          fileType: doc.fileType || 'image/jpeg',
+          fileSizeKb: doc.fileSizeKb || 0,
+          category: 'INVOICE',
+          title: doc.title || 'Vendor Attachment',
+          vendorId: vendor.id
+        }))
+      });
+    }
+
+    return vendor;
   });
 };
 

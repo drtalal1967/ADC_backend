@@ -22,22 +22,6 @@ const createReminder = async (req, res, next) => {
       attachmentUrl,
     });
 
-    if (req.file && attachmentUrl) {
-      try {
-        await documentService.createDocument({
-          fileName: req.file.originalname,
-          fileUrl: attachmentUrl,
-          fileType: req.file.mimetype,
-          fileSizeKb: Math.round(req.file.size / 1024),
-          category: 'OTHER',
-          title: req.body.title || req.body.type || 'Reminder Document',
-          employeeId: req.body.employeeId && req.body.employeeId !== 'General' ? parseInt(req.body.employeeId) : undefined,
-          branch: req.body.branch || 'All Branches',
-        });
-      } catch (docErr) {
-        console.error('Failed to create linked document:', docErr);
-      }
-    }
 
     res.status(201).json(reminder);
   } catch (error) {
@@ -83,22 +67,6 @@ const updateReminder = async (req, res, next) => {
 
     const reminder = await reminderService.updateReminder(req.params.id, updateData);
 
-    if (req.file && attachmentUrl) {
-      try {
-        await documentService.createDocument({
-          fileName: req.file.originalname,
-          fileUrl: attachmentUrl,
-          fileType: req.file.mimetype,
-          fileSizeKb: Math.round(req.file.size / 1024),
-          category: 'OTHER',
-          title: req.body.title || req.body.type || 'Reminder Document Updated',
-          employeeId: req.body.employeeId && req.body.employeeId !== 'General' ? parseInt(req.body.employeeId) : undefined,
-          branch: req.body.branch || 'All Branches',
-        });
-      } catch (docErr) {
-        console.error('Failed to create linked document on update:', docErr);
-      }
-    }
 
     res.json(reminder);
   } catch (error) {

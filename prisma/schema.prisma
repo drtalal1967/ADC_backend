@@ -404,7 +404,7 @@ model LeaveRequest {
   leaveType   LeaveType   @map("leave_type")
   startDate   DateTime    @map("start_date") @db.Date
   endDate     DateTime    @map("end_date") @db.Date
-  totalDays   Int         @map("total_days")
+  totalDays   Float       @map("total_days")
   reason      String?     @db.Text
   status      LeaveStatus @default(PENDING)
   reviewedBy  Int?        @map("reviewed_by")
@@ -427,9 +427,9 @@ model LeaveBalance {
   employeeId     Int       @map("employee_id")
   leaveType      LeaveType @map("leave_type")
   year           Int
-  totalAllotted  Int       @default(0) @map("total_allotted")
-  totalUsed      Int       @default(0) @map("total_used")
-  totalRemaining Int       @default(0) @map("total_remaining")
+  totalAllotted  Float     @default(0) @map("total_allotted")
+  totalUsed      Float     @default(0) @map("total_used")
+  totalRemaining Float     @default(0) @map("total_remaining")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 

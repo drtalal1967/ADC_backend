@@ -37,6 +37,7 @@ app.use('/api/leave-balance', require('./routes/leaveBalance.routes'));
 app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/permissions', require('./routes/permission.routes'));
 app.use('/api/categories', require('./routes/category.routes'));
+app.use('/api/backup', require('./routes/backup.routes'));
 
 // Error handling middleware
 const errorHandler = require('./middleware/error.middleware');
