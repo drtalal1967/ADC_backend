@@ -106,7 +106,10 @@ const getSchedules = async (query) => {
   return await prisma.schedule.findMany({
     where,
     include: { employee: true },
-    orderBy: { startTime: 'asc' },
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }
+    ]
   });
 };
 

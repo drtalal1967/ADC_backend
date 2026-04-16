@@ -2,7 +2,12 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const getAllLaboratories = async () => {
-  return await prisma.laboratory.findMany();
+  return await prisma.laboratory.findMany({
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }
+    ]
+  });
 };
 
 const getLaboratoryById = async (id) => {

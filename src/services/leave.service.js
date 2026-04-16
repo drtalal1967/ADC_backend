@@ -267,7 +267,10 @@ const runMonthlyAutoUpdate = async () => {
 const getAllLeaveRequests = async () => {
   return await prisma.leaveRequest.findMany({
     include: { employee: true },
-    orderBy: { createdAt: 'desc' }
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }
+    ]
   });
 };
 

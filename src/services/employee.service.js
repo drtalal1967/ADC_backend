@@ -10,6 +10,10 @@ const getAllEmployees = async () => {
       },
       documents: true
     },
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }
+    ]
   });
   return employees.map(emp => ({
     ...emp,

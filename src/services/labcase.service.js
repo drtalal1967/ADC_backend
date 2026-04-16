@@ -24,6 +24,10 @@ const getAllLabCases = async (user) => {
   return await prisma.labCase.findMany({
     where,
     include: { dentist: true, laboratory: true, documents: true },
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }
+    ]
   });
 };
 

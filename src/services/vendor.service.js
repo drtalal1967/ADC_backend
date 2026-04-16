@@ -4,6 +4,10 @@ const prisma = new PrismaClient();
 const getAllVendors = async () => {
   return await prisma.vendor.findMany({
     include: { documents: true },
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }
+    ]
   });
 };
 
