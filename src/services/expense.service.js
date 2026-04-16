@@ -14,12 +14,17 @@ const mapPaymentMethod = (method) => {
 };
 
 const getAllExpenses = async () => {
-  return await prisma.expense.findMany({
+  const expenses = await prisma.expense.findMany({
     include: { vendor: true, payments: true, documents: true },
     orderBy: [
       { createdAt: 'desc' },
       { id: 'desc' }
     ]
+  });
+
+  // 🔥 Force sort again in JS (guaranteed order)
+  return expenses.sort((a, b) => {
+    return new Date(b.createdAt) - new Date(a.createdAt);
   });
 };
 
