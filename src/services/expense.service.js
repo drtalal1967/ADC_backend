@@ -14,13 +14,19 @@ const mapPaymentMethod = (method) => {
 };
 
 const getAllExpenses = async () => {
-  return await prisma.expense.findMany({
+  const expenses = await prisma.expense.findMany({
     include: { vendor: true, payments: true, documents: true },
     orderBy: [
-      { expenseDate: 'desc' }, // ✅ newest expense first
+      { expenseDate: 'desc' },
       { id: 'desc' }
     ]
   });
+
+  // 🔥 format amounts to 3 decimal places
+  return expenses.map(exp => ({
+    ...exp,
+    amount: exp.amount !== null ? Number(exp.amount).toFixed(3) : exp.amount
+  }));
 };
 
 const getExpenseById = async (id) => {
