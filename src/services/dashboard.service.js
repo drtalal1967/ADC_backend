@@ -52,8 +52,19 @@ const getFinancialAnalytics = async (branch) => {
     const mName = months[d.getMonth()];
     const year = d.getFullYear();
 
-    // Live Revenue (Sum of all LabCase payments in this period)
-    let monthRevenue = payments
+    // Live Revenue (Previously included LabCases, now only computed using Manual Entries later)
+    let monthRevenue = 0;
+
+    // Live Expenses (Sum of all Expense records in this period)
+    let directExpenses = expenses
+      .filter(e => {
+        const eDate = new Date(e.expenseDate);
+        return eDate.getMonth() === d.getMonth() && eDate.getFullYear() === year;
+      })
+      .reduce((acc, e) => acc + parseFloat(e.amount || 0), 0);
+
+    // LabCase Expenses (Payments made for LabCases to laboratories)
+    let labcaseExpenses = payments
       .filter(p => {
         const pDate = new Date(p.paymentDate || p.createdAt);
         return p.paymentType === 'LABCASE_PAYMENT' && 
@@ -62,13 +73,7 @@ const getFinancialAnalytics = async (branch) => {
       })
       .reduce((acc, p) => acc + parseFloat(p.amount || 0), 0);
 
-    // Live Expenses (Sum of all Expense records in this period)
-    let monthExpenses = expenses
-      .filter(e => {
-        const eDate = new Date(e.expenseDate);
-        return eDate.getMonth() === d.getMonth() && eDate.getFullYear() === year;
-      })
-      .reduce((acc, e) => acc + parseFloat(e.amount || 0), 0);
+    let monthExpenses = directExpenses + labcaseExpenses;
 
     let monthSalaries = baseMonthlySalaries;
 
