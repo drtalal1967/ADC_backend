@@ -17,14 +17,14 @@ const getAllExpenses = async () => {
   const expenses = await prisma.expense.findMany({
     include: { vendor: true, payments: true, documents: true },
     orderBy: [
-      { createdAt: 'desc' },
+      { expenseDate: 'desc' }, // ✅ correct field
       { id: 'desc' }
     ]
   });
 
-  // 🔥 Force sort again in JS (guaranteed order)
+  // extra safety (optional but good)
   return expenses.sort((a, b) => {
-    return new Date(b.createdAt) - new Date(a.createdAt);
+    return new Date(b.expenseDate) - new Date(a.expenseDate);
   });
 };
 
