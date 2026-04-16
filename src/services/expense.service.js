@@ -22,13 +22,20 @@ const getAllExpenses = async () => {
     ]
   });
 
-  // 🔥 format amounts to 3 decimal places
   return expenses.map(exp => ({
     ...exp,
-    amount: exp.amount !== null ? Number(exp.amount).toFixed(3) : exp.amount
+    amount: exp.amount !== null 
+      ? parseFloat(exp.amount).toFixed(3) 
+      : exp.amount,
+
+    payments: exp.payments.map(p => ({
+      ...p,
+      amount: p.amount !== null 
+        ? parseFloat(p.amount).toFixed(3) 
+        : p.amount
+    }))
   }));
 };
-
 const getExpenseById = async (id) => {
   return await prisma.expense.findUnique({
     where: { id: parseInt(id) },
