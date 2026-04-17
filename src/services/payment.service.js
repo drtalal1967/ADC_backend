@@ -28,7 +28,7 @@ const createPayment = async (data) => {
       await prisma.expense.update({
         where: { id: parseInt(expenseId) },
         data: {
-          paymentStatus: 'Paid' // safer value
+          paymentStatus: 'Paid'
         }
       });
     } catch (err) {
@@ -49,9 +49,23 @@ const processBatchPayments = async (payments) => {
   return results;
 };
 
-// 📊 Get all payments
-const getAllPayments = async () => {
+// 📊 Get all payments (WITH FILTERS)
+const getAllPayments = async (filters = {}) => {
+  const { vendorId, labId } = filters;
+
   return await prisma.payment.findMany({
+    where: {
+      ...(vendorId && {
+        expense: {
+          vendorId: parseInt(vendorId)
+        }
+      }),
+      ...(labId && {
+        labCase: {
+          laboratoryId: parseInt(labId)
+        }
+      })
+    },
     include: {
       expense: { include: { vendor: true } },
       labCase: { include: { laboratory: true } },
