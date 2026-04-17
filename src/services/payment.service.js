@@ -1,7 +1,10 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+// ➕ Create payment
 const createPayment = async (data) => {
   const { expenseId, labCaseId, ...rest } = data;
 
-  // Create payment first
   const payment = await prisma.payment.create({
     data: {
       ...rest,
@@ -25,7 +28,7 @@ const createPayment = async (data) => {
       await prisma.expense.update({
         where: { id: parseInt(expenseId) },
         data: {
-          paymentStatus: 'PAID'
+          paymentStatus: 'Paid' // safer value
         }
       });
     } catch (err) {
@@ -34,4 +37,58 @@ const createPayment = async (data) => {
   }
 
   return payment;
+};
+
+// ➕ Batch payments
+const processBatchPayments = async (payments) => {
+  const results = [];
+  for (const p of payments) {
+    const created = await createPayment(p);
+    results.push(created);
+  }
+  return results;
+};
+
+// 📊 Get all payments
+const getAllPayments = async () => {
+  return await prisma.payment.findMany({
+    include: {
+      expense: { include: { vendor: true } },
+      labCase: { include: { laboratory: true } },
+      documents: true
+    },
+    orderBy: [
+      { paymentDate: 'desc' },
+      { id: 'desc' }
+    ]
+  });
+};
+
+// ✏️ Update payment
+const updatePayment = async (id, data) => {
+  return await prisma.payment.update({
+    where: { id: parseInt(id) },
+    data,
+    include: {
+      expense: { include: { vendor: true } },
+      labCase: { include: { laboratory: true } },
+      documents: true
+    }
+  });
+};
+
+// ❌ Delete payment
+const deletePayment = async (id) => {
+  return await prisma.payment.delete({
+    where: { id: parseInt(id) }
+  });
+};
+
+// ✅ Export everything
+module.exports = {
+  createPayment,
+  processBatchPayments,
+  getAllPayments,
+  updatePayment,
+  deletePayment,
 };
