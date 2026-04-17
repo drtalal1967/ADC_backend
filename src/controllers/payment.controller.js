@@ -45,10 +45,20 @@ const deletePayment = async (req, res, next) => {
   }
 };
 
+const getAllCombined = async (req, res, next) => {
+  try {
+    const payments = await paymentService.getAllPayments();
+    res.json(payments);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createPayment,
   processBatchPayments,
   getAllPayments,
+  getAllCombined,   // ✅ add this line
   updatePayment,
   deletePayment,
 };
