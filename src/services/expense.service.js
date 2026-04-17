@@ -17,7 +17,7 @@ const getAllExpenses = async () => {
   return await prisma.expense.findMany({
     include: { vendor: true, payments: true, documents: true },
     orderBy: [
-      { createdAt: 'desc' },
+      { expenseDate: 'desc' },
       { id: 'desc' }
     ]
   });
