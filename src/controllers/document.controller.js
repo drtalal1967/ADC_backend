@@ -30,6 +30,17 @@ const uploadDocument = async (req, res, next) => {
       ? `[source:document_center]${description ? ' ' + description : ''}`
       : description;
 
+    // Identify the uploader
+    let uploadedBy = 'Admin';
+    if (req.user) {
+      if (req.user.employee) {
+        uploadedBy = `${req.user.employee.firstName} ${req.user.employee.lastName}`.trim();
+        if (uploadedBy === '.' || !uploadedBy) uploadedBy = req.user.role?.name || 'Admin';
+      } else if (req.user.role) {
+        uploadedBy = req.user.role.name.charAt(0) + req.user.role.name.slice(1).toLowerCase();
+      }
+    }
+
     const document = await documentService.createDocument({
       fileName: req.file.originalname,
       fileUrl,
@@ -39,6 +50,7 @@ const uploadDocument = async (req, res, next) => {
       title: title || req.file.originalname,
       description: finalDescription,
       branch,
+      uploadedBy, // Save the uploader
       vendorId,
       labCaseId,
       expenseId,

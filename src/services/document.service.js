@@ -44,7 +44,7 @@ const normalizeDoc = (doc) => ({
   ...doc,
   category: categoryLabel[doc.category] || doc.category,
   uploadDate: doc.createdAt ? doc.createdAt.toISOString().split('T')[0] : '',
-  uploadedBy: 'Admin',
+  uploadedBy: doc.uploadedBy || 'Admin',
 });
 
 const getAllDocuments = async () => {
@@ -53,7 +53,10 @@ const getAllDocuments = async () => {
       description: { startsWith: '[source:document_center]' }
     },
     include: { vendor: true, labCase: true, expense: true, payment: true, employee: true, laboratory: true },
-    orderBy: { createdAt: 'desc' }
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }
+    ]
   });
   return docs.map(normalizeDoc);
 };

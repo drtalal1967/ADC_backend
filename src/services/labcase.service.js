@@ -61,6 +61,7 @@ const createCaseLog = async (labCaseId, logData, user) => {
       labCaseId: parseInt(labCaseId),
       type: logData.type,
       note: logData.note,
+      createdAt: logData.createdAt ? new Date(logData.createdAt) : undefined,
       createdBy: user.id,
     },
   });
