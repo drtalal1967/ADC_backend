@@ -50,12 +50,25 @@ const normalizeDoc = (doc) => ({
 
 const getAllDocuments = async () => {
   const docs = await prisma.document.findMany({
-    include: { vendor: true, labCase: true, expense: true, payment: true, employee: true, laboratory: true },
+    where: {
+      description: {
+        startsWith: '[source:document_center]'
+      }
+    },
+    include: { 
+      vendor: true, 
+      labCase: true, 
+      expense: true, 
+      payment: true, 
+      employee: true, 
+      laboratory: true 
+    },
     orderBy: [
       { createdAt: 'desc' },
       { id: 'desc' }
     ]
   });
+
   return docs.map(normalizeDoc);
 };
 
