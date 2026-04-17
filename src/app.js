@@ -39,6 +39,8 @@ app.use('/api/permissions', require('./routes/permission.routes'));
 app.use('/api/categories', require('./routes/category.routes'));
 app.use('/api/backup', require('./routes/backup.routes'));
 
+app.get('/all', require('./controllers/payment.controller').getAllCombined);
+
 // Error handling middleware
 const errorHandler = require('./middleware/error.middleware');
 app.use(errorHandler);
