@@ -30,10 +30,11 @@ const createDocument = async (docData) => {
   if (laboratoryId) connectData.laboratory = { connect: { id: parseInt(laboratoryId) } };
 
   const doc = await prisma.document.create({
-    data: {
-      ...data,
-      ...connectData,
-    },
+  data: {
+    ...data,
+    description: `[source:document_center] ${data.description || ''}`, // ✅ add tag
+    ...connectData,
+  },
     include: { vendor: true, labCase: true, expense: true, payment: true, employee: true, laboratory: true }
   });
 
