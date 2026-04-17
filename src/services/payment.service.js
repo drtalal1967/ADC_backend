@@ -157,17 +157,18 @@ const processedBatchPayments = async (batchData) => {
 };
 
 const getAllPayments = async () => {
-    const payments = await prisma.payment.findMany({
-        include: { 
-          expense: { include: { vendor: true } }, 
-          labCase: { include: { laboratory: true } },
-          documents: true
-        },
-        orderBy: [
-          { paymentDate: 'desc' },
-          { id: 'desc' }
-        ],
-    });
+  return await prisma.payment.findMany({
+    include: { 
+      expense: { include: { vendor: true } }, 
+      labCase: { include: { laboratory: true } },
+      documents: true
+    },
+    orderBy: [
+      { paymentDate: 'desc' },
+      { id: 'desc' }
+    ]
+  });
+};
 
     const formattedPayments = (payments || []).map(p => {
         const type = p.paymentType === "LABCASE_PAYMENT" ? "LAB" : "EXPENSE";
