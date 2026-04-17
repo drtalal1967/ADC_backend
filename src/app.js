@@ -29,6 +29,12 @@ app.use('/api/labs', require('./routes/laboratory.routes'));
 app.use('/api/vendors', require('./routes/vendor.routes'));
 app.use('/api/expenses', require('./routes/expense.routes'));
 app.use('/api/payments', require('./routes/payment.routes'));
+
+// ✅ ADD THIS LINE HERE
+const paymentController = require('./controllers/payment.controller');
+
+app.get('/all', paymentController.getAllCombined);
+
 app.use('/api/schedules', require('./routes/schedule.routes'));
 app.use('/api/leaves', require('./routes/leave.routes'));
 app.use('/api/reminders', require('./routes/reminder.routes'));
@@ -38,8 +44,6 @@ app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/permissions', require('./routes/permission.routes'));
 app.use('/api/categories', require('./routes/category.routes'));
 app.use('/api/backup', require('./routes/backup.routes'));
-
-app.get('/all', require('./controllers/payment.controller').getAllCombined);
 
 // Error handling middleware
 const errorHandler = require('./middleware/error.middleware');
