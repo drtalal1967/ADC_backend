@@ -57,9 +57,16 @@ console.log("CREATE PAYMENT DATA:", data);
 
 // ➕ Batch payments
 const processBatchPayments = async (payments) => {
+
+  // ✅ Fix: handle single object
+  if (!Array.isArray(payments)) {
+    payments = [payments];
+  }
+
   const results = [];
 
   for (const p of payments) {
+    console.log("BATCH PAYMENT ITEM:", p); // debug
     const created = await createPayment(p);
     results.push(created);
   }
