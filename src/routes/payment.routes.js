@@ -3,19 +3,16 @@ const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
 const { authMiddleware, checkPermission } = require('../middleware/auth.middleware');
 
-// 🔐 Apply authentication to all routes
+// 🔐 Apply authentication
 router.use(authMiddleware);
 
 // ➕ Create payment
 router.post('/', checkPermission('payments', 'canCreate'), paymentController.createPayment);
 
-// ➕ Batch payments
-router.post('/batch', checkPermission('payments', 'canCreate'), paymentController.processBatchPayments);
-
-// 📊 ALL PAYMENTS (formatted for frontend)
+// 📊 All payments (USED BY FRONTEND)
 router.get('/all', checkPermission('payments', 'canView'), paymentController.getAllCombined);
 
-// 📄 RAW payments (optional / internal use)
+// 📄 Raw payments
 router.get('/', checkPermission('payments', 'canView'), paymentController.getAllPayments);
 
 // ✏️ Update payment
