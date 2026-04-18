@@ -1,19 +1,36 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// ➕ Create payment (FULLY FIXED)
+// ➕ Create payment (FINAL FIXED)
 const createPayment = async (data) => {
   console.log("CREATE PAYMENT DATA:", data);
 
   const expenseId = data.expenseId ? parseInt(data.expenseId) : null;
   const labCaseId = data.labCaseId ? parseInt(data.labCaseId) : null;
 
-  // ✅ Build CLEAN Prisma object (NO ...rest anymore)
+  // ✅ Convert frontend string → Prisma ENUM
+  const mapPaymentMethod = (method) => {
+    if (!method) return "CASH";
+
+    const m = method.toLowerCase();
+
+    if (m.includes("cash")) return "CASH";
+    if (m.includes("bank")) return "BANK_TRANSFER";
+    if (m.includes("card")) return "CARD";
+
+    return "CASH";
+  };
+
   const paymentData = {
     amount: Number(data.amount),
-    method: data.paymentMethod || data.method || "Cash",
-    notes: data.notes || "",
+
+    // ✅ MUST MATCH Prisma ENUM
+    paymentMethod: mapPaymentMethod(data.paymentMethod || data.method),
+
     paymentDate: new Date(), // ✅ REQUIRED FIELD
+
+    notes: data.notes || "",
+
     paymentType: labCaseId ? "LABCASE_PAYMENT" : "EXPENSE_PAYMENT",
   };
 
@@ -62,7 +79,7 @@ const createPayment = async (data) => {
   return payment;
 };
 
-// ➕ Batch payments (LAB CASE FIXED)
+// ➕ Batch payments (LAB CASES FIXED)
 const processBatchPayments = async (data) => {
   console.log("BATCH DATA:", data);
 
@@ -78,7 +95,7 @@ const processBatchPayments = async (data) => {
     const payment = await createPayment({
       labCaseId: caseId,
       amount,
-      paymentMethod: method,
+      method,
       notes
     });
 
