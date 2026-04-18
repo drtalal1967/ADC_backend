@@ -1,42 +1,42 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// ➕ Create payment (FIXED)
+// ➕ Create payment (FULLY FIXED)
 const createPayment = async (data) => {
   console.log("CREATE PAYMENT DATA:", data);
 
-  const { expenseId, labCaseId, paymentMethod, method, notes, amount } = data;
+  const expenseId = data.expenseId ? parseInt(data.expenseId) : null;
+  const labCaseId = data.labCaseId ? parseInt(data.labCaseId) : null;
 
+  // ✅ Build CLEAN Prisma object (NO ...rest anymore)
   const paymentData = {
-    amount,
-    notes,
-
-    // ✅ FIXED FIELD NAME
-    method: paymentMethod || method || "Cash",
-
-    // ✅ REQUIRED
-    paymentDate: new Date(),
+    amount: Number(data.amount),
+    paymentMethod: data.paymentMethod || data.method || "Cash",
+    notes: data.notes || "",
+    paymentDate: new Date(), // ✅ REQUIRED FIELD
+    paymentType: labCaseId ? "LABCASE_PAYMENT" : "EXPENSE_PAYMENT",
   };
 
-  // Expense
-  if (expenseId && !isNaN(parseInt(expenseId))) {
+  // ✅ Connect Expense
+  if (expenseId) {
     paymentData.expense = {
-      connect: { id: parseInt(expenseId) }
+      connect: { id: expenseId }
     };
-    paymentData.paymentType = "EXPENSE_PAYMENT";
   }
 
-  // Lab case
-  if (labCaseId && !isNaN(parseInt(labCaseId))) {
+  // ✅ Connect Lab Case
+  if (labCaseId) {
     paymentData.labCase = {
-      connect: { id: parseInt(labCaseId) }
+      connect: { id: labCaseId }
     };
-    paymentData.paymentType = "LABCASE_PAYMENT";
   }
 
+  // ❗ Safety
   if (!paymentData.expense && !paymentData.labCase) {
-    throw new Error("Either expenseId or labCaseId must be provided");
+    throw new Error("No expenseId or labCaseId provided");
   }
+
+  console.log("FINAL PAYMENT DATA:", paymentData);
 
   const payment = await prisma.payment.create({
     data: paymentData,
@@ -47,27 +47,39 @@ const createPayment = async (data) => {
     }
   });
 
+  // ✅ Auto-update expense status
+  if (expenseId) {
+    try {
+      await prisma.expense.update({
+        where: { id: expenseId },
+        data: { paymentStatus: 'Paid' }
+      });
+    } catch (err) {
+      console.error('Expense status update failed:', err);
+    }
+  }
+
   return payment;
 };
 
-// ➕ Batch payments (LAB CASES)
+// ➕ Batch payments (LAB CASE FIXED)
 const processBatchPayments = async (data) => {
+  console.log("BATCH DATA:", data);
 
   const { caseIds, amount, method, notes } = data;
 
-  const results = [];
-
   if (!Array.isArray(caseIds) || caseIds.length === 0) {
-    throw new Error("No caseIds provided");
+    throw new Error("Invalid caseIds");
   }
+
+  const results = [];
 
   for (const caseId of caseIds) {
     const payment = await createPayment({
       labCaseId: caseId,
       amount,
       paymentMethod: method,
-      notes,
-      paymentDate: new Date() // ✅ important
+      notes
     });
 
     results.push(payment);
@@ -132,7 +144,7 @@ const deletePayment = async (id) => {
   });
 };
 
-// ✅ Export everything
+// ✅ Export
 module.exports = {
   createPayment,
   processBatchPayments,
