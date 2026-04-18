@@ -1,23 +1,24 @@
 const express = require('express');
 const router = express.Router();
+
 const paymentController = require('../controllers/payment.controller');
 
-// Create single payment
+// ➕ Single payment
 router.post('/', paymentController.createPayment);
 
-// ✅ Batch payments (FIXED)
+// ➕ Batch payments (REQUIRED for lab cases)
 router.post('/batch', paymentController.processBatchPayments);
 
-// Get all payments (formatted)
-router.get('/all', paymentController.getAllCombined);
-
-// Get raw payments
+// 📊 Get raw
 router.get('/', paymentController.getAllPayments);
 
-// Update payment
+// 📊 Get formatted
+router.get('/all', paymentController.getAllCombined);
+
+// ✏️ Update
 router.put('/:id', paymentController.updatePayment);
 
-// Delete payment
+// ❌ Delete
 router.delete('/:id', paymentController.deletePayment);
 
 module.exports = router;
