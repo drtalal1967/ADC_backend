@@ -5,19 +5,20 @@ const prisma = new PrismaClient();
 const createPayment = async (data) => {
   console.log("CREATE PAYMENT DATA:", data);
 
-  const { expenseId, labCaseId, ...rest } = data;
+  const { expenseId, labCaseId, paymentMethod, method, notes, amount } = data;
 
   const paymentData = {
-    ...rest,
+    amount,
+    notes,
 
-    // ✅ REQUIRED FIELD FIX
-    paymentDate: rest.paymentDate || new Date(),
+    // ✅ FIXED FIELD NAME
+    method: paymentMethod || method || "Cash",
 
-    // ✅ SAFETY fallback
-    paymentMethod: rest.paymentMethod || "Cash",
+    // ✅ REQUIRED
+    paymentDate: new Date(),
   };
 
-  // ✅ Expense payment
+  // Expense
   if (expenseId && !isNaN(parseInt(expenseId))) {
     paymentData.expense = {
       connect: { id: parseInt(expenseId) }
@@ -25,7 +26,7 @@ const createPayment = async (data) => {
     paymentData.paymentType = "EXPENSE_PAYMENT";
   }
 
-  // ✅ Lab case payment
+  // Lab case
   if (labCaseId && !isNaN(parseInt(labCaseId))) {
     paymentData.labCase = {
       connect: { id: parseInt(labCaseId) }
@@ -33,7 +34,6 @@ const createPayment = async (data) => {
     paymentData.paymentType = "LABCASE_PAYMENT";
   }
 
-  // ❗ SAFETY CHECK
   if (!paymentData.expense && !paymentData.labCase) {
     throw new Error("Either expenseId or labCaseId must be provided");
   }
@@ -46,18 +46,6 @@ const createPayment = async (data) => {
       documents: true
     }
   });
-
-  // ✅ Auto-update expense → PAID
-  if (expenseId && !isNaN(parseInt(expenseId))) {
-    try {
-      await prisma.expense.update({
-        where: { id: parseInt(expenseId) },
-        data: { paymentStatus: 'Paid' }
-      });
-    } catch (err) {
-      console.error('Failed to update expense status:', err);
-    }
-  }
 
   return payment;
 };
