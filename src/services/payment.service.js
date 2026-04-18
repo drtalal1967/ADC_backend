@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 
 // ➕ Create payment (FIXED)
 const createPayment = async (data) => {
+console.log("CREATE PAYMENT DATA:", data);
   const { expenseId, labCaseId, ...rest } = data;
 
   const paymentData = {
