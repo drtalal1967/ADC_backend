@@ -1,7 +1,7 @@
 const getAllCombined = async (req, res, next) => {
   try {
-    // ✅ pass filters from frontend
-    const results = await paymentService.processBatchPayments(req.body);
+    // ✅ CORRECT: get payments (with filters)
+    const payments = await paymentService.getAllPayments(req.query);
 
     const formattedPayments = payments.map(p => {
       const type = p.paymentType === "LABCASE_PAYMENT" ? "LAB" : "EXPENSE";
