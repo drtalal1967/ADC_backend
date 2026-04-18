@@ -12,6 +12,7 @@ const createPayment = async (req, res, next) => {
 
 const processBatchPayments = async (req, res, next) => {
   try {
+   console.log("BATCH HIT:", req.body); //
     // ✅ ensure it's always an array
     const payments = Array.isArray(req.body)
       ? req.body
