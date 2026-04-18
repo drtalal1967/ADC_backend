@@ -1,17 +1,22 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// ➕ Create payment (FINAL FIXED)
+// ➕ Create payment (FINAL CLEAN)
 const createPayment = async (data) => {
   console.log("CREATE PAYMENT DATA:", data);
 
   const expenseId = data.expenseId ? parseInt(data.expenseId) : null;
   const labCaseId = data.labCaseId ? parseInt(data.labCaseId) : null;
 
+  // ✅ Parse amount ONCE
+  const amount = parseFloat(data.amount);
+  if (!amount || amount <= 0) {
+    throw new Error("Invalid payment amount");
+  }
+
   // ✅ Convert frontend string → Prisma ENUM
   const mapPaymentMethod = (method) => {
     if (!method) return "CASH";
-
     const m = method.toLowerCase();
 
     if (m.includes("cash")) return "CASH";
@@ -22,33 +27,22 @@ const createPayment = async (data) => {
   };
 
   const paymentData = {
-    amount: Number(data.amount),
-
-    // ✅ MUST MATCH Prisma ENUM
+    amount,
     paymentMethod: mapPaymentMethod(data.paymentMethod || data.method),
-
-    paymentDate: new Date(), // ✅ REQUIRED FIELD
-
+    paymentDate: new Date(),
     notes: data.notes || "",
-
     paymentType: labCaseId ? "LABCASE_PAYMENT" : "EXPENSE_PAYMENT",
   };
 
-  // ✅ Connect Expense
+  // ✅ Relations
   if (expenseId) {
-    paymentData.expense = {
-      connect: { id: expenseId }
-    };
+    paymentData.expense = { connect: { id: expenseId } };
   }
 
-  // ✅ Connect Lab Case
   if (labCaseId) {
-    paymentData.labCase = {
-      connect: { id: labCaseId }
-    };
+    paymentData.labCase = { connect: { id: labCaseId } };
   }
 
-  // ❗ Safety
   if (!paymentData.expense && !paymentData.labCase) {
     throw new Error("No expenseId or labCaseId provided");
   }
@@ -64,64 +58,69 @@ const createPayment = async (data) => {
     }
   });
 
-// ✅ Auto-update expense status
-if (expenseId) {
-  try {
-const updated = await prisma.expense.update({
-  where: { id: expenseId },
-  data: {
-    amountPaid: { increment: Number(data.amount) }
+  // =========================
+  // ✅ EXPENSE UPDATE
+  // =========================
+  if (expenseId) {
+    try {
+      const updated = await prisma.expense.update({
+        where: { id: expenseId },
+        data: {
+          amountPaid: { increment: amount }
+        }
+      });
+
+      const newStatus =
+        Number(updated.amountPaid) >= Number(updated.amount)
+          ? "PAID"
+          : "PARTIAL";
+
+      await prisma.expense.update({
+        where: { id: expenseId },
+        data: {
+          paymentStatus: newStatus,
+          status: newStatus === "PAID" ? "PAID" : updated.status
+        }
+      });
+
+    } catch (err) {
+      console.error('Expense status update failed:', err);
+    }
   }
-});
 
-const newStatus =
-  Number(updated.amountPaid) >= Number(updated.amount)
-    ? "PAID"
-    : "PARTIAL";
+  // =========================
+  // ✅ LAB CASE UPDATE
+  // =========================
+  if (labCaseId) {
+    try {
+      const updated = await prisma.labCase.update({
+        where: { id: labCaseId },
+        data: {
+          amountPaid: { increment: amount }
+        }
+      });
 
-await prisma.expense.update({
-  where: { id: expenseId },
-  data: {
-    paymentStatus: newStatus,
-    status: newStatus === "PAID" ? "PAID" : updated.status
+      const newStatus =
+        Number(updated.amountPaid) >= Number(updated.cost)
+          ? "PAID"
+          : "PARTIAL";
+
+      await prisma.labCase.update({
+        where: { id: labCaseId },
+        data: {
+          paymentStatus: newStatus
+        }
+      });
+
+    } catch (err) {
+      console.error('Lab case status update failed:', err);
+    }
   }
-});
 
-  } catch (err) {
-    console.error('Expense status update failed:', err);
-  }
-}
-
-// ✅ Auto-update lab case status
-if (labCaseId) {
-  try {
-    const updated = await prisma.labCase.update({
-      where: { id: labCaseId },
-      data: {
-        amountPaid: { increment: Number(data.amount) }
-      }
-    });
-
-    const newStatus =
-      Number(updated.amountPaid) >= Number(updated.cost)
-        ? "PAID"
-        : "PARTIAL";
-
-    await prisma.labCase.update({
-      where: { id: labCaseId },
-      data: {
-        paymentStatus: newStatus
-      }
-    });
-
-  } catch (err) {
-    console.error('Lab case status update failed:', err);
-  }
-}
   return payment;
 };
 
-// ➕ Batch payments (LAB CASES FIXED)
+// ➕ Batch payments
 const processBatchPayments = async (data) => {
   console.log("BATCH DATA:", data);
 
@@ -154,19 +153,11 @@ const getAllPayments = async (filters = {}) => {
   let where = {};
 
   if (vendorId) {
-    where = {
-      expense: {
-        vendorId: parseInt(vendorId)
-      }
-    };
+    where.expense = { vendorId: parseInt(vendorId) };
   }
 
   if (labId) {
-    where = {
-      labCase: {
-        laboratoryId: parseInt(labId)
-      }
-    };
+    where.labCase = { laboratoryId: parseInt(labId) };
   }
 
   return await prisma.payment.findMany({
