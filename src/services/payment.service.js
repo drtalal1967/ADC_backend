@@ -3,11 +3,18 @@ const prisma = new PrismaClient();
 
 // ➕ Create payment (FIXED)
 const createPayment = async (data) => {
-console.log("CREATE PAYMENT DATA:", data);
+  console.log("CREATE PAYMENT DATA:", data);
+
   const { expenseId, labCaseId, ...rest } = data;
 
   const paymentData = {
     ...rest,
+
+    // ✅ REQUIRED FIELD FIX
+    paymentDate: rest.paymentDate || new Date(),
+
+    // ✅ SAFETY fallback
+    paymentMethod: rest.paymentMethod || "Cash",
   };
 
   // ✅ Expense payment
@@ -55,25 +62,27 @@ console.log("CREATE PAYMENT DATA:", data);
   return payment;
 };
 
-// ➕ Batch payments
+// ➕ Batch payments (LAB CASES)
 const processBatchPayments = async (data) => {
 
   const { caseIds, amount, method, notes } = data;
 
   const results = [];
 
-  // ✅ Handle Lab Case batch payments
-  if (Array.isArray(caseIds)) {
-    for (const caseId of caseIds) {
-      const payment = await createPayment({
-        labCaseId: caseId,
-        amount,
-        paymentMethod: method,
-        notes
-      });
+  if (!Array.isArray(caseIds) || caseIds.length === 0) {
+    throw new Error("No caseIds provided");
+  }
 
-      results.push(payment);
-    }
+  for (const caseId of caseIds) {
+    const payment = await createPayment({
+      labCaseId: caseId,
+      amount,
+      paymentMethod: method,
+      notes,
+      paymentDate: new Date() // ✅ important
+    });
+
+    results.push(payment);
   }
 
   return results;
