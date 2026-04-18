@@ -10,10 +10,18 @@ const createPayment = async (req, res, next) => {
   }
 };
 
-// ➕ Batch payments (FIXED)
 const processBatchPayments = async (req, res, next) => {
   try {
-    const results = await paymentService.processBatchPayments(req.body);
+    // ✅ ensure it's always an array
+    const payments = Array.isArray(req.body)
+      ? req.body
+      : req.body.payments || [];
+
+    if (!Array.isArray(payments)) {
+      return res.status(400).json({ message: 'Invalid payments format' });
+    }
+
+    const results = await paymentService.processBatchPayments(payments);
     res.status(201).json(results);
   } catch (error) {
     next(error);
