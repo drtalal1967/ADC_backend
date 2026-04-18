@@ -1,6 +1,5 @@
 const getAllCombined = async (req, res, next) => {
   try {
-    // ✅ CORRECT: get payments (with filters)
     const payments = await paymentService.getAllPayments(req.query);
 
     const formattedPayments = payments.map(p => {
@@ -9,13 +8,9 @@ const getAllCombined = async (req, res, next) => {
       let itemName = 'Unknown';
 
       if (type === 'LAB') {
-        if (p.labCase) {
-          itemName = p.labCase.laboratory?.name || 'Lab Payment';
-        }
+        itemName = p.labCase?.laboratory?.name || 'Lab Payment';
       } else {
-        if (p.expense) {
-          itemName = p.expense.vendor?.name || 'Vendor Payment';
-        }
+        itemName = p.expense?.vendor?.name || 'Vendor Payment';
       }
 
       return {
