@@ -76,6 +76,19 @@ const createPayment = async (data) => {
     }
   }
 
+  // ✅ Auto-update lab case status
+if (labCaseId) {
+  try {
+    await prisma.labCase.update({
+      where: { id: labCaseId },
+      data: {
+        paymentStatus: 'PAID' // ⚠️ use correct enum value
+      }
+    });
+  } catch (err) {
+    console.error('Lab case status update failed:', err);
+  }
+}
   return payment;
 };
 
