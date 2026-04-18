@@ -12,13 +12,14 @@ const createPayment = async (req, res, next) => {
 
 const processBatchPayments = async (req, res, next) => {
   try {
-    console.log("BATCH HIT:", req.body); // ✅ debug
+    console.log("BATCH HIT:", req.body);
 
-    // ✅ send FULL body (because it has caseIds, amount, etc.)
     const results = await paymentService.processBatchPayments(req.body);
 
     res.status(201).json(results);
+
   } catch (error) {
+    console.error("BATCH ERROR:", error); // ✅ DEBUG HERE
     next(error);
   }
 };
