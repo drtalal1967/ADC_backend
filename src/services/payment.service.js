@@ -56,19 +56,24 @@ console.log("CREATE PAYMENT DATA:", data);
 };
 
 // ➕ Batch payments
-const processBatchPayments = async (payments) => {
+const processBatchPayments = async (data) => {
 
-  // ✅ Fix: handle single object
-  if (!Array.isArray(payments)) {
-    payments = [payments];
-  }
+  const { caseIds, amount, method, notes } = data;
 
   const results = [];
 
-  for (const p of payments) {
-    console.log("BATCH PAYMENT ITEM:", p); // debug
-    const created = await createPayment(p);
-    results.push(created);
+  // ✅ Handle Lab Case batch payments
+  if (Array.isArray(caseIds)) {
+    for (const caseId of caseIds) {
+      const payment = await createPayment({
+        labCaseId: caseId,
+        amount,
+        paymentMethod: method,
+        notes
+      });
+
+      results.push(payment);
+    }
   }
 
   return results;
