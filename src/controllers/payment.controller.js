@@ -1,3 +1,26 @@
+const paymentService = require('../services/payment.service');
+
+// ➕ Create payment
+const createPayment = async (req, res, next) => {
+  try {
+    const payment = await paymentService.createPayment(req.body);
+    res.status(201).json(payment);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 📊 Raw payments
+const getAllPayments = async (req, res, next) => {
+  try {
+    const payments = await paymentService.getAllPayments(req.query);
+    res.json(payments || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// 📊 Formatted payments (for frontend)
 const getAllCombined = async (req, res, next) => {
   try {
     const payments = await paymentService.getAllPayments(req.query);
@@ -35,4 +58,33 @@ const getAllCombined = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+};
+
+// ✏️ Update payment
+const updatePayment = async (req, res, next) => {
+  try {
+    const payment = await paymentService.updatePayment(req.params.id, req.body);
+    res.json(payment);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ❌ Delete payment
+const deletePayment = async (req, res, next) => {
+  try {
+    await paymentService.deletePayment(req.params.id);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ✅ EXPORT EVERYTHING
+module.exports = {
+  createPayment,
+  getAllPayments,
+  getAllCombined,
+  updatePayment,
+  deletePayment,
 };
