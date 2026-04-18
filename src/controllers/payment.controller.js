@@ -10,6 +10,16 @@ const createPayment = async (req, res, next) => {
   }
 };
 
+// ➕ Batch payments (FIXED)
+const processBatchPayments = async (req, res, next) => {
+  try {
+    const results = await paymentService.processBatchPayments(req.body);
+    res.status(201).json(results);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // 📊 Raw payments
 const getAllPayments = async (req, res, next) => {
   try {
@@ -80,9 +90,10 @@ const deletePayment = async (req, res, next) => {
   }
 };
 
-// ✅ EXPORT EVERYTHING
+// ✅ Export everything
 module.exports = {
   createPayment,
+  processBatchPayments,
   getAllPayments,
   getAllCombined,
   updatePayment,
