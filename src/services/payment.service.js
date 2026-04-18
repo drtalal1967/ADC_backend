@@ -11,7 +11,7 @@ const createPayment = async (data) => {
   // ✅ Build CLEAN Prisma object (NO ...rest anymore)
   const paymentData = {
     amount: Number(data.amount),
-    paymentMethod: data.paymentMethod || data.method || "Cash",
+    method: data.paymentMethod || data.method || "Cash",
     notes: data.notes || "",
     paymentDate: new Date(), // ✅ REQUIRED FIELD
     paymentType: labCaseId ? "LABCASE_PAYMENT" : "EXPENSE_PAYMENT",
