@@ -3,22 +3,22 @@ const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
 const { authMiddleware, checkPermission } = require('../middleware/auth.middleware');
 
-// 🔐 Apply authentication
+// Apply authentication
 router.use(authMiddleware);
 
-// ➕ Create payment
+// Create payment
 router.post('/', checkPermission('payments', 'canCreate'), paymentController.createPayment);
 
-// 📊 All payments (USED BY FRONTEND)
+// Get all payments (for frontend)
 router.get('/all', checkPermission('payments', 'canView'), paymentController.getAllCombined);
 
-// 📄 Raw payments
+// Get raw payments
 router.get('/', checkPermission('payments', 'canView'), paymentController.getAllPayments);
 
-// ✏️ Update payment
+// Update payment
 router.put('/:id', checkPermission('payments', 'canUpdate'), paymentController.updatePayment);
 
-// ❌ Delete payment
+// Delete payment
 router.delete('/:id', checkPermission('payments', 'canDelete'), paymentController.deletePayment);
 
 module.exports = router;
