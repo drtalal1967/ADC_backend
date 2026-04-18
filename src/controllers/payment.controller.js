@@ -12,17 +12,11 @@ const createPayment = async (req, res, next) => {
 
 const processBatchPayments = async (req, res, next) => {
   try {
-   console.log("BATCH HIT:", req.body); //
-    // ✅ ensure it's always an array
-    const payments = Array.isArray(req.body)
-      ? req.body
-      : req.body.payments || [];
+    console.log("BATCH HIT:", req.body); // ✅ debug
 
-    if (!Array.isArray(payments)) {
-      return res.status(400).json({ message: 'Invalid payments format' });
-    }
+    // ✅ send FULL body (because it has caseIds, amount, etc.)
+    const results = await paymentService.processBatchPayments(req.body);
 
-    const results = await paymentService.processBatchPayments(payments);
     res.status(201).json(results);
   } catch (error) {
     next(error);
