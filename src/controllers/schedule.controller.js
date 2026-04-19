@@ -2,7 +2,13 @@ const scheduleService = require('../services/schedule.service');
 
 const createSchedule = async (req, res, next) => {
   try {
-    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+    const role =
+      req.user?.role?.name?.toUpperCase?.() ||
+      req.user?.role?.toUpperCase?.() ||
+      req.user?.roleName?.toUpperCase?.() ||
+      "";
+
+    if (!["ADMIN", "SECRETARY"].includes(role)) {
       return res.status(403).json({
         message: "You are not allowed to create schedules"
       });
@@ -17,7 +23,13 @@ const createSchedule = async (req, res, next) => {
 
 const createManySchedules = async (req, res, next) => {
   try {
-    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+    const role =
+      req.user?.role?.name?.toUpperCase?.() ||
+      req.user?.role?.toUpperCase?.() ||
+      req.user?.roleName?.toUpperCase?.() ||
+      "";
+
+    if (!["ADMIN", "SECRETARY"].includes(role)) {
       return res.status(403).json({
         message: "You are not allowed to create schedules"
       });
@@ -32,66 +44,64 @@ const createManySchedules = async (req, res, next) => {
 
 const getSchedules = async (req, res, next) => {
   try {
-   const role =
-  req.user?.role?.name?.toUpperCase?.() ||
-  req.user?.role?.toUpperCase?.() ||
-  req.user?.roleName?.toUpperCase?.() ||
-  "";
+    const role =
+      req.user?.role?.name?.toUpperCase?.() ||
+      req.user?.role?.toUpperCase?.() ||
+      req.user?.roleName?.toUpperCase?.() ||
+      "";
 
-const isPrivileged = ["ADMIN", "SECRETARY"].includes(role);
+    const isPrivileged = ["ADMIN", "SECRETARY"].includes(role);
+
     const { start, end, month } = req.query;
 
-    // MANDATORY VALIDATION: Month or (Start and End)
+    // MANDATORY VALIDATION
     if (!month && (!start && !end)) {
-      return res.status(400).json({ message: 'Month or (Start and End dates) are required' });
+      return res.status(400).json({
+        message: 'Month or (Start and End dates) are required'
+      });
     }
 
-    const role =
-  req.user?.role?.name?.toUpperCase() ||
-  req.user?.role?.toUpperCase() ||
-  req.user?.roleName?.toUpperCase();
+    const query = { ...req.query };
 
-const isPrivileged = ["ADMIN", "SECRETARY"].includes(role);
-
-const query = { ...req.query };
-
-// ✅ Only restrict NORMAL users
-if (!isPrivileged) {
-  if (!req.user.employee) {
-    return res.status(403).json({ message: 'User has no associated employee record' });
-  }
-  query.employeeId = req.user.employee.id;
-} else {
-  // ✅ Ensure no filtering
-  delete query.employeeId;
-}
-
-   // ✅ Allow ALL users to see ALL schedules
-// (No restriction needed)
+    // ✅ Only restrict normal employees
+    if (!isPrivileged) {
+      if (!req.user.employee) {
+        return res.status(403).json({
+          message: 'User has no associated employee record'
+        });
+      }
+      query.employeeId = req.user.employee.id;
+    } else {
+      delete query.employeeId;
+    }
 
     const schedules = await scheduleService.getSchedules(query);
 
-    // SENIOR DEV RESPONSE FORMAT: title, startTime, endTime + local date
     const formattedSchedules = schedules.map(s => {
       const d = new Date(s.startTime);
-      const date = d.getFullYear() + '-' + 
-        String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+
+      const date =
+        d.getFullYear() + '-' +
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
         String(d.getDate()).padStart(2, '0');
 
       const formatTime = (dateObj) => {
         if (!dateObj) return '';
-        const d = new Date(dateObj);
-        return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        const dt = new Date(dateObj);
+        return String(dt.getHours()).padStart(2, '0') + ':' +
+               String(dt.getMinutes()).padStart(2, '0');
       };
 
       return {
         id: s.id,
         employeeId: s.employeeId,
-        employeeName: s.employee ? `${s.employee.firstName} ${s.employee.lastName}` : 'Unknown',
+        employeeName: s.employee
+          ? `${s.employee.firstName} ${s.employee.lastName}`
+          : 'Unknown',
         branch: s.branch,
         title: s.title || 'Work Shift',
         shiftType: s.scheduleType || 'SHIFT',
-        date, // Crucial for Day/Week grouping in local time
+        date,
         startTime: formatTime(s.startTime),
         endTime: formatTime(s.endTime)
       };
@@ -105,7 +115,13 @@ if (!isPrivileged) {
 
 const updateSchedule = async (req, res, next) => {
   try {
-    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+    const role =
+      req.user?.role?.name?.toUpperCase?.() ||
+      req.user?.role?.toUpperCase?.() ||
+      req.user?.roleName?.toUpperCase?.() ||
+      "";
+
+    if (!["ADMIN", "SECRETARY"].includes(role)) {
       return res.status(403).json({
         message: "You are not allowed to update schedules"
       });
@@ -120,7 +136,13 @@ const updateSchedule = async (req, res, next) => {
 
 const deleteSchedule = async (req, res, next) => {
   try {
-    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+    const role =
+      req.user?.role?.name?.toUpperCase?.() ||
+      req.user?.role?.toUpperCase?.() ||
+      req.user?.roleName?.toUpperCase?.() ||
+      "";
+
+    if (!["ADMIN", "SECRETARY"].includes(role)) {
       return res.status(403).json({
         message: "You are not allowed to delete schedules"
       });
