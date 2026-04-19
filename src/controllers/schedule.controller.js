@@ -32,6 +32,12 @@ const createManySchedules = async (req, res, next) => {
 
 const getSchedules = async (req, res, next) => {
   try {
+    const role =
+  req.user?.role?.name?.toUpperCase() ||
+  req.user?.role?.toUpperCase() ||
+  req.user?.roleName?.toUpperCase();
+
+const isPrivileged = ["ADMIN", "SECRETARY"].includes(role);
     const { start, end, month } = req.query;
 
     // MANDATORY VALIDATION: Month or (Start and End)
