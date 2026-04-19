@@ -2,6 +2,12 @@ const scheduleService = require('../services/schedule.service');
 
 const createSchedule = async (req, res, next) => {
   try {
+    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+      return res.status(403).json({
+        message: "You are not allowed to create schedules"
+      });
+    }
+
     const schedule = await scheduleService.createSchedule(req.body);
     res.status(201).json(schedule);
   } catch (error) {
@@ -11,6 +17,12 @@ const createSchedule = async (req, res, next) => {
 
 const createManySchedules = async (req, res, next) => {
   try {
+    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+      return res.status(403).json({
+        message: "You are not allowed to create schedules"
+      });
+    }
+
     const result = await scheduleService.createManySchedules(req.body);
     res.status(201).json(result);
   } catch (error) {
@@ -29,13 +41,8 @@ const getSchedules = async (req, res, next) => {
 
     const query = { ...req.query };
 
-    // ROLE-BASED ACCESS: Employees only see their own
-    if (req.user.role?.name?.toUpperCase() !== 'ADMIN') {
-      if (!req.user.employee) {
-        return res.status(403).json({ message: 'User has no associated employee record' });
-      }
-      query.employeeId = req.user.employee.id;
-    }
+   // ✅ Allow ALL users to see ALL schedules
+// (No restriction needed)
 
     const schedules = await scheduleService.getSchedules(query);
 
@@ -73,6 +80,12 @@ const getSchedules = async (req, res, next) => {
 
 const updateSchedule = async (req, res, next) => {
   try {
+    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+      return res.status(403).json({
+        message: "You are not allowed to update schedules"
+      });
+    }
+
     const schedule = await scheduleService.updateSchedule(req.params.id, req.body);
     res.json(schedule);
   } catch (error) {
@@ -82,6 +95,12 @@ const updateSchedule = async (req, res, next) => {
 
 const deleteSchedule = async (req, res, next) => {
   try {
+    if (!["ADMIN", "SECRETARY"].includes(req.user.role?.name?.toUpperCase())) {
+      return res.status(403).json({
+        message: "You are not allowed to delete schedules"
+      });
+    }
+
     await scheduleService.deleteSchedule(req.params.id);
     res.status(204).send();
   } catch (error) {
