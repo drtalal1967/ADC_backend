@@ -45,7 +45,25 @@ const isPrivileged = ["ADMIN", "SECRETARY"].includes(role);
       return res.status(400).json({ message: 'Month or (Start and End dates) are required' });
     }
 
-    const query = { ...req.query };
+    const role =
+  req.user?.role?.name?.toUpperCase() ||
+  req.user?.role?.toUpperCase() ||
+  req.user?.roleName?.toUpperCase();
+
+const isPrivileged = ["ADMIN", "SECRETARY"].includes(role);
+
+const query = { ...req.query };
+
+// ✅ Only restrict NORMAL users
+if (!isPrivileged) {
+  if (!req.user.employee) {
+    return res.status(403).json({ message: 'User has no associated employee record' });
+  }
+  query.employeeId = req.user.employee.id;
+} else {
+  // ✅ Ensure no filtering
+  delete query.employeeId;
+}
 
    // ✅ Allow ALL users to see ALL schedules
 // (No restriction needed)
