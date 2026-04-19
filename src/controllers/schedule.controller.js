@@ -44,14 +44,6 @@ const createManySchedules = async (req, res, next) => {
 
 const getSchedules = async (req, res, next) => {
   try {
-    const role =
-      req.user?.role?.name?.toUpperCase?.() ||
-      req.user?.role?.toUpperCase?.() ||
-      req.user?.roleName?.toUpperCase?.() ||
-      "";
-
-    const isPrivileged = ["ADMIN", "SECRETARY"].includes(role);
-
     const { start, end, month } = req.query;
 
     // MANDATORY VALIDATION
@@ -61,19 +53,11 @@ const getSchedules = async (req, res, next) => {
       });
     }
 
+    // ✅ DO NOT FILTER BY USER AT ALL
     const query = { ...req.query };
 
-    // ✅ Only restrict normal employees
-    if (!isPrivileged) {
-      if (!req.user.employee) {
-        return res.status(403).json({
-          message: 'User has no associated employee record'
-        });
-      }
-      query.employeeId = req.user.employee.id;
-    } else {
-      delete query.employeeId;
-    }
+    // ❗ Remove any employee filter sent from frontend
+    delete query.employeeId;
 
     const schedules = await scheduleService.getSchedules(query);
 
@@ -108,6 +92,7 @@ const getSchedules = async (req, res, next) => {
     });
 
     res.json(formattedSchedules);
+
   } catch (error) {
     next(error);
   }
