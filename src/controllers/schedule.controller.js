@@ -1,5 +1,39 @@
 const scheduleService = require('../services/schedule.service');
 
+const BAHRAIN_TIME_ZONE = 'Asia/Bahrain';
+
+const getBahrainParts = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: BAHRAIN_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date).reduce((parts, part) => {
+    if (part.type !== 'literal') parts[part.type] = part.value;
+    return parts;
+  }, {});
+};
+
+const formatBahrainDate = (value) => {
+  const parts = getBahrainParts(value);
+  if (!parts) return '';
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+
+const formatBahrainTime = (value) => {
+  const parts = getBahrainParts(value);
+  if (!parts) return '';
+  const hour = parts.hour === '24' ? '00' : parts.hour;
+  return `${hour}:${parts.minute}`;
+};
+
 const createSchedule = async (req, res, next) => {
   try {
     const schedule = await scheduleService.createSchedule(req.body);
@@ -38,20 +72,6 @@ const getSchedules = async (req, res, next) => {
     const schedules = await scheduleService.getSchedules(query);
 
     const formattedSchedules = schedules.map(s => {
-      const d = new Date(s.startTime);
-
-      const date =
-        d.getFullYear() + '-' +
-        String(d.getMonth() + 1).padStart(2, '0') + '-' +
-        String(d.getDate()).padStart(2, '0');
-
-      const formatTime = (dateObj) => {
-        if (!dateObj) return '';
-        const dt = new Date(dateObj);
-        return String(dt.getHours()).padStart(2, '0') + ':' +
-               String(dt.getMinutes()).padStart(2, '0');
-      };
-
       return {
         id: s.id,
         employeeId: s.employeeId,
@@ -70,9 +90,9 @@ const getSchedules = async (req, res, next) => {
         branch: s.branch,
         title: s.title || 'Work Shift',
         shiftType: s.scheduleType || 'SHIFT',
-        date,
-        startTime: formatTime(s.startTime),
-        endTime: formatTime(s.endTime)
+        date: formatBahrainDate(s.startTime),
+        startTime: formatBahrainTime(s.startTime),
+        endTime: formatBahrainTime(s.endTime)
       };
     });
 

@@ -3,6 +3,61 @@ const PDFDocument = require('pdfkit');
 const { sendWorkScheduleEmail } = require('./email.service');
 const prisma = new PrismaClient();
 
+const BAHRAIN_TIME_ZONE = 'Asia/Bahrain';
+const BAHRAIN_OFFSET_HOURS = 3;
+
+const getBahrainParts = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: BAHRAIN_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    weekday: 'short',
+    hour12: false,
+  }).formatToParts(date).reduce((parts, part) => {
+    if (part.type !== 'literal') parts[part.type] = part.value;
+    return parts;
+  }, {});
+};
+
+const parseBahrainDateTime = (date, time = '00:00') => {
+  if (!date || !time) return null;
+  const [year, month, day] = String(date).split('-').map(Number);
+  const [hour = 0, minute = 0] = String(time).split(':').map(Number);
+
+  if (![year, month, day, hour, minute].every(Number.isFinite)) {
+    return new Date(`${date}T${time}`);
+  }
+
+  return new Date(Date.UTC(year, month - 1, day, hour - BAHRAIN_OFFSET_HOURS, minute, 0));
+};
+
+const toDateKey = (value) => {
+  const parts = getBahrainParts(value);
+  if (!parts) return '';
+  return `${parts.year}-${parts.month}-${parts.day}`;
+};
+
+const formatDateDisplay = (value) => {
+  const key = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : toDateKey(value);
+  if (!key) return '';
+  const [year, month, day] = key.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+const formatTime = (value) => {
+  const parts = getBahrainParts(value);
+  if (!parts) return '';
+  const hour = parts.hour === '24' ? '00' : parts.hour;
+  return `${hour}:${parts.minute}`;
+};
+
 const createSchedule = async (scheduleData) => {
   const { employeeId, date, startTime, endTime, ...rest } = scheduleData;
   return await prisma.schedule.create({
@@ -10,8 +65,8 @@ const createSchedule = async (scheduleData) => {
       ...rest,
       scheduleType: rest.scheduleType || "SHIFT",
       title: rest.title || "Work Shift",
-      startTime: new Date(`${date}T${startTime}`),
-      endTime: new Date(`${date}T${endTime}`),
+      startTime: parseBahrainDateTime(date, startTime),
+      endTime: parseBahrainDateTime(date, endTime),
       employee: { connect: { id: parseInt(employeeId) } },
     },
   });
@@ -27,8 +82,8 @@ const createManySchedules = async (batchData) => {
       branch: s.branch,
       scheduleType: "SHIFT",
       title: "Work Shift",
-      startTime: new Date(`${s.date}T${s.startTime}`),
-      endTime: new Date(`${s.date}T${s.endTime}`),
+      startTime: parseBahrainDateTime(s.date, s.startTime),
+      endTime: parseBahrainDateTime(s.date, s.endTime),
     }));
   } else {
     // Handling range-based logic (as requested by user)
@@ -46,8 +101,8 @@ const createManySchedules = async (batchData) => {
           branch,
           scheduleType: "SHIFT",
           title: "Work Shift",
-          startTime: new Date(`${dateStr}T${startTime}`),
-          endTime: new Date(`${dateStr}T${endTime}`),
+          startTime: parseBahrainDateTime(dateStr, startTime),
+          endTime: parseBahrainDateTime(dateStr, endTime),
         });
       }
       current.setDate(current.getDate() + 1);
@@ -88,16 +143,16 @@ const getSchedules = async (query) => {
 
   if (month) {
     const [year, m] = month.split('-').map(Number);
-    const dateStart = new Date(year, m - 1, 1);
-    const dateEnd = new Date(year, m, 0, 23, 59, 59); // Last day of month
+    const dateStart = parseBahrainDateTime(`${year}-${String(m).padStart(2, '0')}-01`, '00:00');
+    const dateEnd = parseBahrainDateTime(`${year}-${String(m).padStart(2, '0')}-${String(new Date(Date.UTC(year, m, 0)).getUTCDate()).padStart(2, '0')}`, '23:59'); // Last day of month
     where.startTime = {
       gte: dateStart,
       lte: dateEnd,
     };
   } else if (finalStart && finalEnd) {
     where.startTime = {
-      gte: new Date(finalStart),
-      lte: new Date(finalEnd + 'T23:59:59'),
+      gte: parseBahrainDateTime(finalStart, '00:00'),
+      lte: parseBahrainDateTime(finalEnd, '23:59'),
     };
   }
 
@@ -122,10 +177,10 @@ const updateSchedule = async (id, scheduleData) => {
   if (employeeId) updateData.employee = { connect: { id: parseInt(employeeId) } };
 
   // If date + startTime/endTime are provided, reconstruct them
-  if (date && startTime) updateData.startTime = new Date(`${date}T${startTime}`);
+  if (date && startTime) updateData.startTime = parseBahrainDateTime(date, startTime);
   else if (startTime) updateData.startTime = new Date(startTime);
 
-  if (date && endTime) updateData.endTime = new Date(`${date}T${endTime}`);
+  if (date && endTime) updateData.endTime = parseBahrainDateTime(date, endTime);
   else if (endTime) updateData.endTime = new Date(endTime);
 
   if (rest.branch) updateData.branch = rest.branch;
@@ -140,25 +195,6 @@ const deleteSchedule = async (id) => {
   return await prisma.schedule.delete({
     where: { id: parseInt(id) },
   });
-};
-
-const toDateKey = (value) => {
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-const formatDateDisplay = (value) => {
-  const key = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : toDateKey(value);
-  if (!key) return '';
-  const [year, month, day] = key.split('-');
-  return `${day}/${month}/${year}`;
-};
-
-const formatTime = (value) => {
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return '';
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
 const getTimeHours = (start, end) => {
