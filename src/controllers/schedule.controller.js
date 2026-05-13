@@ -86,6 +86,10 @@ const getSchedules = async (req, res, next) => {
           jobTitle: s.employee.jobTitle,
           specialization: s.employee.specialization,
           scheduleColor: s.employee.scheduleColor,
+          role: s.employee.user?.role?.name || null,
+          user: s.employee.user ? {
+            role: s.employee.user.role?.name || null,
+          } : null,
         } : null,
         branch: s.branch,
         title: s.title || 'Work Shift',

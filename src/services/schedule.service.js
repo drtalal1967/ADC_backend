@@ -162,7 +162,15 @@ const getSchedules = async (query) => {
 
   return await prisma.schedule.findMany({
     where,
-    include: { employee: true },
+    include: {
+      employee: {
+        include: {
+          user: {
+            include: { role: true },
+          },
+        },
+      },
+    },
     orderBy: [
       { createdAt: 'desc' },
       { id: 'desc' }
