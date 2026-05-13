@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { sendLeaveRequestSubmittedEmail, sendLeaveStatusEmail } = require('./email.service');
 
 const LEAVE_TYPES = [
   'ANNUAL', 'SICK', 'RELATIVES_DEATH', 'HAJJ', 'MARRIAGE', 'OTHERS',
@@ -72,17 +73,31 @@ const getEmployeeBalance = async (employeeId, year) => {
   return pivotBalances(balances, employee);
 };
 
-const updateEmployeeBalances = async (employeeId, editData) => {
+const updateEmployeeBalances = async (employeeId, editData, user) => {
   const year = new Date().getFullYear();
   const eid = parseInt(employeeId);
+  const roleName = (user?.role?.name || '').toUpperCase();
+  const annualKeys = ['annual'];
+  const manualKeys = ['sick', 'relativesDeath', 'hajj', 'marriage', 'others', 'maternity'];
 
-  const entries = Object.entries(editData).filter(([key]) => 
-    ['annual', 'sick', 'relativesDeath', 'hajj', 'marriage', 'others', 'maternity'].includes(key)
-  );
+  const canEditAnnual = roleName === 'ADMIN';
+  const canEditManualLeaves = ['ADMIN', 'SECRETARY'].includes(roleName);
 
-  return await prisma.$transaction(async (tx) => {
+  const entries = Object.entries(editData).filter(([key]) => {
+    if (annualKeys.includes(key)) return canEditAnnual;
+    if (manualKeys.includes(key)) return canEditManualLeaves;
+    return false;
+  });
+
+  if (entries.length === 0) {
+    throw new Error('You are not allowed to update these leave balances');
+  }
+
+  await prisma.$transaction(async (tx) => {
     for (const [key, val] of entries) {
       const dbType = key.replace(/([A-Z])/g, "_$1").toUpperCase();
+      const total = parseFloat(val.total) || 0;
+      const used = parseFloat(val.used) || 0;
       const existing = await tx.leaveBalance.findUnique({
         where: { employeeId_leaveType_year: { employeeId: eid, leaveType: dbType, year } }
       });
@@ -91,9 +106,9 @@ const updateEmployeeBalances = async (employeeId, editData) => {
         await tx.leaveBalance.update({
           where: { id: existing.id },
           data: {
-            totalAllotted: val.total,
-            totalUsed: val.used,
-            totalRemaining: Math.max(0, val.total - val.used)
+            totalAllotted: total,
+            totalUsed: used,
+            totalRemaining: total - used
           }
         });
       } else {
@@ -102,15 +117,16 @@ const updateEmployeeBalances = async (employeeId, editData) => {
             employeeId: eid,
             leaveType: dbType,
             year,
-            totalAllotted: val.total,
-            totalUsed: val.used,
-            totalRemaining: Math.max(0, val.total - val.used)
+            totalAllotted: total,
+            totalUsed: used,
+            totalRemaining: total - used
           }
         });
       }
     }
-    return getEmployeeBalance(eid, year);
   });
+
+  return getEmployeeBalance(eid, year);
 };
 
 const applyLeave = async (leaveData) => {
@@ -149,12 +165,7 @@ const applyLeave = async (leaveData) => {
       }
     });
   }
-
-  if (balance.totalRemaining < totalDays) {
-    throw new Error('Insufficient leave balance');
-  }
-
-  return await prisma.leaveRequest.create({
+  const leaveRequest = await prisma.leaveRequest.create({
     data: {
       leaveType: data.leaveType,
       startDate,
@@ -163,29 +174,28 @@ const applyLeave = async (leaveData) => {
       totalDays,
       employee: { connect: { id: parseInt(employeeId) } },
     },
+    include: { employee: { include: { user: true } } },
   });
+
+  sendLeaveRequestSubmittedEmail('drtalal@alawidental.com', leaveRequest).catch(err => {
+    console.error('[Leave] Failed to send submitted notification:', err.message);
+  });
+
+  return leaveRequest;
 };
 
 const updateLeaveStatus = async (id, statusData) => {
   const { status, reviewedBy, reviewNotes } = statusData;
-  
-  return await prisma.$transaction(async (tx) => {
+  const leaveRequestId = parseInt(id, 10);
+  const reviewerId = Number.isFinite(Number(reviewedBy)) ? parseInt(reviewedBy, 10) : null;
+
+  await prisma.$transaction(async (tx) => {
     const leaveRequest = await tx.leaveRequest.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: leaveRequestId },
     });
 
     if (!leaveRequest) throw new Error('Leave request not found');
     if (leaveRequest.status !== 'PENDING') throw new Error('Leave request already processed');
-
-    const updatedRequest = await tx.leaveRequest.update({
-      where: { id: parseInt(id) },
-      data: {
-        status,
-        reviewedBy: parseInt(reviewedBy),
-        reviewedAt: new Date(),
-        reviewNotes,
-      },
-    });
 
     if (status === 'APPROVED') {
       const year = leaveRequest.startDate.getFullYear();
@@ -213,22 +223,46 @@ const updateLeaveStatus = async (id, statusData) => {
       }
     }
 
-    return updatedRequest;
+    await tx.leaveRequest.update({
+      where: { id: leaveRequestId },
+      data: {
+        status,
+        reviewedBy: reviewerId,
+        reviewedAt: new Date(),
+        reviewNotes,
+      },
+    });
+  }, { timeout: 20000 });
+
+  const updatedRequest = await prisma.leaveRequest.findUnique({
+    where: { id: leaveRequestId },
+    include: { employee: { include: { user: true } } },
   });
+
+  if (updatedRequest && ['APPROVED', 'REJECTED'].includes(updatedRequest.status)) {
+    const employeeEmail = updatedRequest.employee?.user?.email;
+    if (employeeEmail) {
+      sendLeaveStatusEmail(employeeEmail, updatedRequest, 'info@alawidental.com').catch(err => {
+        console.error('[Leave] Failed to send status notification:', err.message);
+      });
+    }
+  }
+
+  return updatedRequest;
 };
 
 const runMonthlyAutoUpdate = async () => {
   const year = new Date().getFullYear();
   const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' } });
 
-  console.log(`Running monthly leave increment for ${employees.length} employees...`);
+  console.log(`Running monthly annual leave increment for ${employees.length} employees...`);
 
-  return await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx) => {
     for (const emp of employees) {
-      // Annual Leave +2.5
       const annual = await tx.leaveBalance.findUnique({
         where: { employeeId_leaveType_year: { employeeId: emp.id, leaveType: 'ANNUAL', year } }
       });
+
       if (annual) {
         await tx.leaveBalance.update({
           where: { id: annual.id },
@@ -240,24 +274,6 @@ const runMonthlyAutoUpdate = async () => {
       } else {
         await tx.leaveBalance.create({
           data: { employeeId: emp.id, leaveType: 'ANNUAL', year, totalAllotted: 2.5, totalRemaining: 2.5 }
-        });
-      }
-
-      // Sick Leave +1.25
-      const sick = await tx.leaveBalance.findUnique({
-        where: { employeeId_leaveType_year: { employeeId: emp.id, leaveType: 'SICK', year } }
-      });
-      if (sick) {
-        await tx.leaveBalance.update({
-          where: { id: sick.id },
-          data: {
-            totalAllotted: sick.totalAllotted + 1.25,
-            totalRemaining: sick.totalRemaining + 1.25
-          }
-        });
-      } else {
-        await tx.leaveBalance.create({
-          data: { employeeId: emp.id, leaveType: 'SICK', year, totalAllotted: 1.25, totalRemaining: 1.25 }
         });
       }
     }
@@ -276,7 +292,7 @@ const getAllLeaveRequests = async () => {
 
 const deleteLeaveRequest = async (id) => {
   return await prisma.leaveRequest.delete({
-    where: { id: parseInt(id) }
+    where: { id: leaveRequestId }
   });
 };
 

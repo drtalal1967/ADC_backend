@@ -1,0 +1,1 @@
+ALTER TABLE `employees` ADD COLUMN `schedule_color` VARCHAR(50) NULL;

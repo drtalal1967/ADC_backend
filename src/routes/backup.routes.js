@@ -1,12 +1,12 @@
 const express = require('express');
 const { downloadBackup } = require('../controllers/backup.controller');
-const { authMiddleware } = require('../middleware/auth.middleware');
+const { authMiddleware, authorize } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
 router.use(authMiddleware);
 
 // Only admin can download backup
-router.get('/download', downloadBackup);
+router.get('/download', authorize('ADMIN'), downloadBackup);
 
 module.exports = router;

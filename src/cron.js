@@ -12,7 +12,7 @@ const initCron = () => {
     } catch (error) {
       console.error('Cron Error: Monthly leave update failed:', error);
     }
-  });
+  }, { timezone: 'Asia/Bahrain' });
 
   // ─── 2. Daily Reminder Email Blast (Every day at 8:00 AM) ───
   cron.schedule('0 8 * * *', async () => {
@@ -42,11 +42,10 @@ const initCron = () => {
     } catch (error) {
       console.error('Cron Error: Daily email reminder job failed:', error);
     }
-  });
+  }, { timezone: 'Asia/Bahrain' });
 
   console.log('Cron: Monthly leave update scheduled (1st of every month).');
   console.log('Cron: Daily reminder email scheduled (every day at 8:00 AM).');
 };
 
 module.exports = { initCron };
-

@@ -43,17 +43,21 @@ const getAllCombined = async (req, res, next) => {
       const type = p.paymentType === "LABCASE_PAYMENT" ? "LAB" : "EXPENSE";
 
       let itemName = 'Unknown';
+      let itemLogoUrl = null;
 
       if (type === 'LAB') {
         itemName = p.labCase?.laboratory?.name || 'Lab Payment';
+        itemLogoUrl = p.labCase?.laboratory?.logoUrl || null;
       } else {
         itemName = p.expense?.vendor?.name || 'Vendor Payment';
+        itemLogoUrl = p.expense?.vendor?.logoUrl || null;
       }
 
       return {
         id: p.id,
         type,
         itemName,
+        itemLogoUrl,
         amount: Number(p.amount),
         method: p.paymentMethod || "Cash",
         status: "Paid",

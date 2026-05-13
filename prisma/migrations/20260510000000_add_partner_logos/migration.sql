@@ -1,0 +1,2 @@
+ALTER TABLE `vendors` ADD COLUMN `logo_url` VARCHAR(500) NULL;
+ALTER TABLE `laboratories` ADD COLUMN `logo_url` VARCHAR(500) NULL;

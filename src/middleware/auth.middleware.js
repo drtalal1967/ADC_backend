@@ -63,11 +63,16 @@ const checkPermission = (module, action) => {
     // Map common frontend actions to schema fields
     const actionMap = {
       'view': 'canView',
+      'canview': 'canView',
       'create': 'canCreate',
+      'cancreate': 'canCreate',
       'edit': 'canUpdate',
       'update': 'canUpdate',
+      'canupdate': 'canUpdate',
       'delete': 'canDelete',
-      'export': 'canExport'
+      'candelete': 'canDelete',
+      'export': 'canExport',
+      'canexport': 'canExport'
     };
 
     const targetAction = actionMap[action.toLowerCase()] || action;
@@ -81,8 +86,49 @@ const checkPermission = (module, action) => {
   };
 };
 
+const checkAnyPermission = (checks) => {
+  return (req, res, next) => {
+    const user = req.user;
+    if (!user || !user.role) {
+      return res.status(403).json({ message: 'No role assigned' });
+    }
+
+    if (user.role.name === 'ADMIN') {
+      return next();
+    }
+
+    const actionMap = {
+      'view': 'canView',
+      'canview': 'canView',
+      'create': 'canCreate',
+      'cancreate': 'canCreate',
+      'edit': 'canUpdate',
+      'update': 'canUpdate',
+      'canupdate': 'canUpdate',
+      'delete': 'canDelete',
+      'candelete': 'canDelete',
+      'export': 'canExport',
+      'canexport': 'canExport'
+    };
+
+    const allowed = checks.some(({ module, action }) => {
+      const permission = user.role.permissions.find(p => p.module === module);
+      const targetAction = actionMap[String(action).toLowerCase()] || action;
+      return Boolean(permission?.[targetAction]);
+    });
+
+    if (!allowed) {
+      const label = checks.map(c => `${c.module}:${c.action}`).join(' or ');
+      console.log(`[AUTH] Permission DENIED for user ${user.email} (Role: ${user.role.name}) on ${label}`);
+      return res.status(403).json({ message: `Permission denied for ${label}` });
+    }
+
+    next();
+  };
+};
+
 const isAdmin = (req, res, next) => {
-  if (req.user.role?.name !== 'ADMIN' && req.user.role?.name !== 'MANAGER') {
+  if (req.user.role?.name !== 'ADMIN') {
     return res.status(403).json({ message: 'Admin access required' });
   }
   next();
@@ -93,5 +139,6 @@ module.exports = {
   authenticateToken: authMiddleware, // Alias for consistency
   authorize,
   checkPermission,
+  checkAnyPermission,
   isAdmin
 };

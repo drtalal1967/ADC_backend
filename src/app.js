@@ -32,8 +32,9 @@ app.use('/api/payments', require('./routes/payment.routes'));
 
 // ✅ ADD THIS LINE HERE
 const paymentController = require('./controllers/payment.controller');
+const { authMiddleware, checkPermission } = require('./middleware/auth.middleware');
 
-app.get('/all', paymentController.getAllCombined);
+app.get('/all', authMiddleware, checkPermission('payments', 'view'), paymentController.getAllCombined);
 
 app.use('/api/schedules', require('./routes/schedule.routes'));
 app.use('/api/leaves', require('./routes/leave.routes'));

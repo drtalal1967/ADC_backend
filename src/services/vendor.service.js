@@ -17,24 +17,46 @@ const getVendorById = async (id) => {
   });
 };
 
+const buildVendorData = (vendorData) => {
+  const data = {};
+  const fieldMap = {
+    name: 'name',
+    contactPerson: 'contactName',
+    contactName: 'contactName',
+    phone: 'phone',
+    email: 'email',
+    address: 'address',
+    notes: 'notes',
+    taxId: 'taxId',
+    bankName: 'bankName',
+    bankAccount: 'bankAccount',
+    isActive: 'isActive'
+  };
+
+  Object.entries(fieldMap).forEach(([sourceField, targetField]) => {
+    if (Object.prototype.hasOwnProperty.call(vendorData, sourceField)) {
+      data[targetField] = vendorData[sourceField];
+    }
+  });
+
+  if (Object.prototype.hasOwnProperty.call(vendorData, 'categories')) {
+    data.categories = Array.isArray(vendorData.categories) ? vendorData.categories.join(',') : vendorData.categories;
+  }
+
+  return data;
+};
+
 const createVendor = async (vendorData) => {
-  const { name, contactPerson, categories, phone, email, address, notes, taxId, bankName, bankAccount, documents } = vendorData;
+  const { logoUrl, documents } = vendorData;
   
   return await prisma.$transaction(async (tx) => {
     const vendor = await tx.vendor.create({
-      data: {
-        name,
-        contactName: contactPerson,
-        categories: Array.isArray(categories) ? categories.join(',') : categories,
-        phone,
-        email,
-        address,
-        notes,
-        taxId,
-        bankName,
-        bankAccount
-      },
+      data: buildVendorData(vendorData),
     });
+
+    if (Object.prototype.hasOwnProperty.call(vendorData, 'logoUrl')) {
+      await tx.$executeRaw`UPDATE vendors SET logo_url = ${logoUrl || null} WHERE id = ${vendor.id}`;
+    }
 
     if (documents && documents.length > 0) {
       await tx.document.createMany({
@@ -50,29 +72,22 @@ const createVendor = async (vendorData) => {
       });
     }
 
-    return vendor;
+    return { ...vendor, logoUrl: logoUrl || null };
   });
 };
 
 const updateVendor = async (id, vendorData) => {
-  const { name, contactPerson, categories, phone, email, address, notes, taxId, bankName, bankAccount, documents } = vendorData;
+  const { logoUrl, documents } = vendorData;
   
   return await prisma.$transaction(async (tx) => {
     const vendor = await tx.vendor.update({
       where: { id: parseInt(id) },
-      data: {
-        name,
-        contactName: contactPerson,
-        categories: Array.isArray(categories) ? categories.join(',') : categories,
-        phone,
-        email,
-        address,
-        notes,
-        taxId,
-        bankName,
-        bankAccount
-      },
+      data: buildVendorData(vendorData),
     });
+
+    if (Object.prototype.hasOwnProperty.call(vendorData, 'logoUrl')) {
+      await tx.$executeRaw`UPDATE vendors SET logo_url = ${logoUrl || null} WHERE id = ${parseInt(id)}`;
+    }
 
     if (documents && documents.length > 0) {
       // Filter out documents that are already linked (optional, but safer to just add new ones)
@@ -90,7 +105,7 @@ const updateVendor = async (id, vendorData) => {
       });
     }
 
-    return vendor;
+    return { ...vendor, logoUrl: logoUrl ?? vendor.logoUrl ?? null };
   });
 };
 

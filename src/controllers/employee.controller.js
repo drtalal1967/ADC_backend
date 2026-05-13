@@ -2,7 +2,7 @@ const employeeService = require('../services/employee.service');
 
 const getAllEmployees = async (req, res, next) => {
   try {
-    const employees = await employeeService.getAllEmployees();
+    const employees = await employeeService.getAllEmployees(req.query);
     res.json(employees);
   } catch (error) {
     next(error);
@@ -31,6 +31,15 @@ const createEmployee = async (req, res, next) => {
 const updateEmployee = async (req, res, next) => {
   try {
     const employee = await employeeService.updateEmployee(req.params.id, req.body);
+    res.json(employee);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateScheduleColor = async (req, res, next) => {
+  try {
+    const employee = await employeeService.updateScheduleColor(req.params.id, req.body.scheduleColor);
     res.json(employee);
   } catch (error) {
     next(error);
@@ -72,6 +81,7 @@ module.exports = {
   getEmployeeById,
   createEmployee,
   updateEmployee,
+  updateScheduleColor,
   deleteEmployee,
   getDentists,
   importEmployees,

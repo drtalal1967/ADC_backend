@@ -15,7 +15,14 @@ const mapPaymentMethod = (method) => {
 
 const getAllExpenses = async () => {
   return await prisma.expense.findMany({
-    include: { vendor: true, payments: true, documents: true },
+    include: {
+      vendor: true,
+      payments: {
+        include: { documents: true },
+        orderBy: [{ paymentDate: 'desc' }, { id: 'desc' }]
+      },
+      documents: true
+    },
     orderBy: [
       { createdAt: 'desc' },
       { id: 'desc' }
@@ -26,7 +33,14 @@ const getAllExpenses = async () => {
 const getExpenseById = async (id) => {
   return await prisma.expense.findUnique({
     where: { id: parseInt(id) },
-    include: { vendor: true, payments: true, documents: true },
+    include: {
+      vendor: true,
+      payments: {
+        include: { documents: true },
+        orderBy: [{ paymentDate: 'desc' }, { id: 'desc' }]
+      },
+      documents: true
+    },
   });
 };
 
@@ -102,6 +116,7 @@ const processBatchPayment = async (payload) => {
 
   let remainingBatchAmount = parseFloat(amount);
   const reversedIds = [...expenseIds];
+  const batchReference = `EXP-BATCH-${Date.now()}`;
 
   const results = [];
   for (let i = 0; i < reversedIds.length; i++) {
@@ -128,6 +143,7 @@ const processBatchPayment = async (payload) => {
           amount: paymentAmount,
           paymentDate: new Date(),
           paymentMethod: mapPaymentMethod(method),
+          referenceNumber: batchReference,
           notes: notes,
           status: 'PAID'
         }

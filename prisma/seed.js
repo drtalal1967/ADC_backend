@@ -7,15 +7,20 @@ const MODULES = [
   'dashboard',
   'lab_cases',
   'expenses',
+  'laboratories',
   'vendors',
+  'financials',
   'employees',
   'leaves',
+  'leave_balance',
   'payments',
-  'schedules',
+  'schedule',
+  'reports',
   'reminders',
   'documents',
-  'finance',
-  'permissions'
+  'work_schedule',
+  'salaries',
+  'settings'
 ];
 
 const ROLES = [
@@ -53,9 +58,9 @@ async function main() {
       const is_staff = ['SECRETARY', 'DENTIST', 'ASSISTANT'].includes(role.name);
 
       const perms = {
-        canView: is_admin || is_manager || (is_staff && ['lab_cases', 'vendors', 'leaves', 'dashboard', 'documents', 'schedules', 'reminders', 'employees'].includes(module)) || (is_accountant && ['lab_cases', 'expenses', 'vendors', 'payments', 'finance', 'dashboard', 'schedules', 'reminders', 'employees'].includes(module)),
-        canCreate: is_admin || (is_manager && ['lab_cases', 'payments', 'schedules', 'reminders'].includes(module)) || (is_staff && ['lab_cases', 'leaves', 'documents'].includes(module)) || (is_accountant && ['expenses', 'vendors', 'payments'].includes(module)),
-        canUpdate: is_admin || (is_manager && ['lab_cases', 'payments', 'schedules', 'reminders'].includes(module)) || (role.name === 'SECRETARY' && ['lab_cases'].includes(module)),
+        canView: is_admin || is_manager || (is_staff && ['lab_cases', 'vendors', 'leaves', 'leave_balance', 'dashboard', 'documents', 'schedule', 'work_schedule', 'reminders', 'employees'].includes(module)) || (is_accountant && ['lab_cases', 'expenses', 'vendors', 'payments', 'financials', 'reports', 'dashboard', 'schedule', 'work_schedule', 'reminders', 'employees'].includes(module)),
+        canCreate: is_admin || (is_manager && ['lab_cases', 'payments', 'schedule', 'reminders'].includes(module)) || (is_staff && ['lab_cases', 'leaves', 'documents'].includes(module)) || (is_accountant && ['expenses', 'vendors', 'payments'].includes(module)),
+        canUpdate: is_admin || (is_manager && ['lab_cases', 'payments', 'schedule', 'reminders'].includes(module)) || (role.name === 'SECRETARY' && ['lab_cases'].includes(module)),
         canDelete: is_admin || (is_manager && ['lab_cases', 'payments'].includes(module)),
         canExport: is_admin || is_manager || is_accountant,
       };

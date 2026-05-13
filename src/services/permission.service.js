@@ -1,15 +1,41 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const ALLOWED_MODULES = [
+  'dashboard',
+  'lab_cases',
+  'expenses',
+  'laboratories',
+  'vendors',
+  'financials',
+  'payments',
+  'employees',
+  'schedule',
+  'leaves',
+  'leave_balance',
+  'reports',
+  'reminders',
+  'documents',
+  'work_schedule',
+  'salaries',
+  'settings',
+];
+
 const getRolePermissions = async (roleId) => {
   return await prisma.permission.findMany({
-    where: { roleId: parseInt(roleId) }
+    where: {
+      roleId: parseInt(roleId),
+      module: { in: ALLOWED_MODULES }
+    },
+    orderBy: { module: 'asc' }
   });
 };
 
 const updateRolePermissions = async (roleId, permissions) => {
+  const cleanPermissions = permissions.filter(p => ALLOWED_MODULES.includes(p.module));
+
   return await prisma.$transaction(
-    permissions.map((p) =>
+    cleanPermissions.map((p) =>
       prisma.permission.upsert({
         where: {
           roleId_module: {

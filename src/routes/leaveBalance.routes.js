@@ -6,10 +6,10 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
-router.get('/', checkPermission('leaves', 'canView'), leaveController.getLeaveBalances);
-router.get('/:employeeId', checkPermission('leaves', 'canView'), leaveController.getEmployeeBalance);
-router.put('/:employeeId', checkPermission('leaves', 'canUpdate'), leaveController.updateEmployeeBalances);
-router.delete('/:employeeId', checkPermission('leaves', 'canDelete'), leaveController.deleteLeaveBalance);
-router.post('/monthly-update', checkPermission('leaves', 'canUpdate'), leaveController.runMonthlyUpdate);
+router.get('/', checkPermission('leave_balance', 'view'), leaveController.getLeaveBalances);
+router.get('/:employeeId', checkPermission('leave_balance', 'view'), leaveController.getEmployeeBalance);
+router.put('/:employeeId', checkPermission('leave_balance', 'update'), leaveController.updateEmployeeBalances);
+router.delete('/:employeeId', checkPermission('leave_balance', 'delete'), leaveController.deleteLeaveBalance);
+router.post('/monthly-update', checkPermission('leave_balance', 'update'), leaveController.runMonthlyUpdate);
 
 module.exports = router;

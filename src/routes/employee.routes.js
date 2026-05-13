@@ -11,6 +11,7 @@ router.get('/dentists', checkPermission('employees', 'canView'), employeeControl
 router.post('/import', checkPermission('employees', 'canCreate'), employeeController.importEmployees);
 router.get('/:id', checkPermission('employees', 'canView'), employeeController.getEmployeeById);
 router.post('/', checkPermission('employees', 'canCreate'), employeeController.createEmployee);
+router.patch('/:id/schedule-color', checkPermission('employees', 'canUpdate'), employeeController.updateScheduleColor);
 router.put('/:id', checkPermission('employees', 'canUpdate'), employeeController.updateEmployee);
 router.delete('/:id', checkPermission('employees', 'canDelete'), employeeController.deleteEmployee);
 

@@ -7,10 +7,10 @@ const router = express.Router();
 router.use(authMiddleware);
 
 router.get('/stats', checkPermission('dashboard', 'canView'), dashboardController.getStats);
-router.get('/analytics', checkPermission('dashboard', 'canView'), dashboardController.getAnalytics);
+router.get('/analytics', checkPermission('financials', 'view'), dashboardController.getAnalytics);
 
-router.post('/financial-entry', checkPermission('dashboard', 'canUpdate'), dashboardController.addFinancialEntry);
-router.get('/financial-entries', checkPermission('dashboard', 'canView'), dashboardController.getFinancialEntries);
-router.delete('/financial-entry/:id', checkPermission('dashboard', 'canUpdate'), dashboardController.deleteFinancialEntry);
+router.post('/financial-entry', checkPermission('financials', 'create'), dashboardController.addFinancialEntry);
+router.get('/financial-entries', checkPermission('financials', 'view'), dashboardController.getFinancialEntries);
+router.delete('/financial-entry/:id', checkPermission('financials', 'delete'), dashboardController.deleteFinancialEntry);
 
 module.exports = router;

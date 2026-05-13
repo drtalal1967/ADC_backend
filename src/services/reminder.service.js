@@ -27,6 +27,10 @@ const createReminder = async (reminderData) => {
     }
   }
 
+  const parsedNotifyAt = parseDate(notifyDate || reminderData.notifyAt);
+  const emailMethod = (method || 'In-App').toLowerCase();
+  const shouldUseEmail = emailMethod === 'email' || emailMethod === 'both';
+
   const savedReminder = await prisma.reminder.create({
     data: {
       userId: parseInt(userId),
@@ -36,7 +40,7 @@ const createReminder = async (reminderData) => {
       description: description || '',
       severity: reminderData.severity || type || 'info',
       dueAt: dueAt,
-      notifyAt: parseDate(notifyDate || reminderData.notifyAt),
+      notifyAt: parsedNotifyAt || (shouldUseEmail ? dueAt : null),
       branch: branch || 'All Branches',
       method: method || 'In-App',
       reminderType: 'GENERAL',
@@ -44,9 +48,7 @@ const createReminder = async (reminderData) => {
     },
   });
 
-  // Send email if method is Email or Both
-  const emailMethod = (method || 'In-App').toLowerCase();
-  if (emailMethod === 'email' || emailMethod === 'both') {
+  if (shouldUseEmail && (savedReminder.notifyAt || dueAt) <= new Date()) {
     try {
       let recipientEmail = process.env.SMTP_ADMIN; // Default: admin inbox
 
@@ -59,7 +61,13 @@ const createReminder = async (reminderData) => {
         if (user?.email) recipientEmail = user.email;
       }
 
-      await sendReminderEmail(recipientEmail, savedReminder);
+      const sent = await sendReminderEmail(recipientEmail, savedReminder);
+      if (sent) {
+        await prisma.reminder.update({
+          where: { id: savedReminder.id },
+          data: { isSent: true },
+        });
+      }
     } catch (emailErr) {
       console.error('[Reminder] Email send failed (non-blocking):', emailErr.message);
     }

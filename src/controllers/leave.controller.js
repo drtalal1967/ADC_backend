@@ -53,7 +53,7 @@ const getEmployeeBalance = async (req, res, next) => {
 const updateEmployeeBalances = async (req, res, next) => {
   try {
     const { employeeId } = req.params;
-    const balance = await leaveService.updateEmployeeBalances(employeeId, req.body);
+    const balance = await leaveService.updateEmployeeBalances(employeeId, req.body, req.user);
     res.json(balance);
   } catch (error) {
     next(error);

@@ -22,13 +22,23 @@ const updateProfile = async (req, res, next) => {
       profileImageUrl,
     });
 
+    const displayName = updatedProfile
+      ? `${updatedProfile.firstName || ''} ${updatedProfile.lastName || ''}`.trim()
+      : (name || 'System User');
+
     res.json({
       message: 'Profile updated successfully',
       user: {
-        ...req.user,
         email: email || req.user.email,
-        name: name || req.user.name,
-        profileImage: profileImageUrl || req.user.profileImage,
+        firstName: updatedProfile?.firstName || req.user.employee?.firstName || '',
+        lastName: updatedProfile?.lastName || req.user.employee?.lastName || '',
+        name: displayName,
+        role: req.user.role?.name || 'SECRETARY',
+        permissions: req.user.role?.permissions || [],
+        employeeId: req.user.employee?.id,
+        branch: req.user.employee?.branch || 'Tubli Branch',
+        avatar: displayName.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2),
+        profileImage: profileImageUrl || updatedProfile?.profileImageUrl || req.user.employee?.profileImageUrl,
       },
     });
   } catch (error) {

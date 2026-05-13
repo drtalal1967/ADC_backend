@@ -190,6 +190,7 @@ model Employee {
   address          String?        @db.Text
   nationalId       String?        @unique @map("national_id") @db.VarChar(50)
   profileImageUrl  String?        @map("profile_image_url") @db.VarChar(500)
+  scheduleColor    String?        @map("schedule_color") @db.VarChar(50)
   jobTitle         String?        @map("job_title") @db.VarChar(100)
   specialization   String?        @db.VarChar(200)
   licenseNumber    String?        @map("license_number") @db.VarChar(100)
@@ -223,6 +224,7 @@ model Employee {
 model Laboratory {
   id          Int      @id @default(autoincrement())
   name        String   @db.VarChar(200)
+  logoUrl     String?  @map("logo_url") @db.VarChar(500)
   contactName String?  @map("contact_name") @db.VarChar(100)
   phone       String?  @db.VarChar(20)
   email       String?  @db.VarChar(200)
@@ -254,7 +256,7 @@ model LabCase {
   shade           String?       @db.VarChar(50)
   toothNumbers    String?       @map("tooth_numbers") @db.VarChar(100)
   sentDate        DateTime?     @map("sent_date") @db.Date
-  expectedDate    DateTime?     @map("expected_date") @db.Date
+  expectedDate    DateTime?     @map("expected_date")
   receivedDate    DateTime?     @map("received_date") @db.Date
   cost            Decimal       @default(0) @db.Decimal(10, 2)
   amountPaid      Decimal       @default(0) @map("amount_paid") @db.Decimal(10, 2)
@@ -298,6 +300,7 @@ model CaseLog {
 model Vendor {
   id           Int      @id @default(autoincrement())
   name         String   @db.VarChar(200)
+  logoUrl      String?  @map("logo_url") @db.VarChar(500)
   categories   String?  @db.VarChar(500) // comma-separated categories
   contactName  String?  @map("contact_name") @db.VarChar(100)
   phone        String?  @db.VarChar(20)

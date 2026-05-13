@@ -2,8 +2,29 @@ const { PrismaClient } = require('@prisma/client');
 const { hashPassword } = require('../utils/password.utils');
 const prisma = new PrismaClient();
 
-const getAllEmployees = async () => {
+const hasEndDate = (value) => Boolean(value && value !== 'N/A' && !Number.isNaN(new Date(value).getTime()));
+
+const getAllEmployees = async (options = {}) => {
+  const includeFormer = options.includeFormer === 'true' || options.includeFormer === true || options.status === 'all';
+  const requestedStatus = String(options.status || '').toLowerCase();
+  const where = {};
+
+  if (!includeFormer) {
+    where.endDate = null;
+    where.user = { isActive: true };
+  } else if (requestedStatus === 'active') {
+    where.endDate = null;
+    where.user = { isActive: true };
+  } else if (requestedStatus === 'former' || requestedStatus === 'inactive') {
+    where.OR = [
+      { endDate: { not: null } },
+      { status: { in: ['INACTIVE', 'TERMINATED'] } },
+      { user: { isActive: false } },
+    ];
+  }
+
   const employees = await prisma.employee.findMany({
+    where,
     include: { 
       user: { 
         include: { role: true }
@@ -45,10 +66,10 @@ const getEmployeeById = async (id) => {
 };
 
 const createEmployee = async (employeeData) => {
-  const { 
-    email, password, role, 
-    firstName, lastName, phone, dateOfBirth, gender, address, 
-    nationalId, profileImageUrl, jobTitle, specialization, licenseNumber, 
+  const {
+    email, password, role,
+    firstName, lastName, phone, dateOfBirth, gender, address,
+    nationalId, profileImageUrl, scheduleColor, jobTitle, specialization, licenseNumber,
     licenseExpiry, visaExpiry, workPermitExpiry,
     employmentType, status, joiningDate, endDate, basicSalary, notes,
     documents
@@ -63,7 +84,7 @@ const createEmployee = async (employeeData) => {
         email,
         passwordHash: hashedPassword,
         roleId: roleRecord?.id,
-        isActive: !endDate || new Date(endDate) >= new Date().setHours(0,0,0,0),
+        isActive: !hasEndDate(endDate),
       },
     });
 
@@ -78,6 +99,7 @@ const createEmployee = async (employeeData) => {
         address,
         nationalId,
         profileImageUrl,
+        scheduleColor: scheduleColor || null,
         jobTitle,
         specialization,
         licenseNumber,
@@ -85,7 +107,7 @@ const createEmployee = async (employeeData) => {
         visaExpiry: visaExpiry ? new Date(visaExpiry) : null,
         workPermitExpiry: workPermitExpiry ? new Date(workPermitExpiry) : null,
         employmentType,
-        status,
+        status: hasEndDate(endDate) ? 'INACTIVE' : (status || 'ACTIVE'),
         joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         basicSalary: parseFloat(basicSalary || 0),
@@ -118,88 +140,108 @@ const createEmployee = async (employeeData) => {
 const isValidDate = (val) => val && val !== 'N/A' && val !== '' && !isNaN(new Date(val).getTime());
 
 const updateEmployee = async (id, employeeData) => {
-  const { 
+  const {
     email, role, isActive,
-    firstName, lastName, phone, dateOfBirth, gender, address, 
-    nationalId, profileImageUrl, jobTitle, specialization, licenseNumber, 
+    firstName, lastName, phone, dateOfBirth, gender, address,
+    nationalId, profileImageUrl, scheduleColor, jobTitle, specialization, licenseNumber,
     licenseExpiry, visaExpiry, workPermitExpiry,
     employmentType, status, joiningDate, endDate, basicSalary, notes,
     documents
   } = employeeData;
 
-  return await prisma.$transaction(async (tx) => {
-    const employee = await tx.employee.findUnique({ where: { id: parseInt(id) } });
-    if (!employee) throw new Error('Employee not found');
+  const empId = parseInt(id);
+  const employee = await prisma.employee.findUnique({ where: { id: empId } });
+  if (!employee) throw new Error('Employee not found');
 
-    if (email || role || isActive !== undefined || endDate !== undefined) {
-        const calculateIsActive = () => {
-          if (isActive !== undefined) return isActive;
-          const targetEndDate = endDate !== undefined ? endDate : employee.endDate;
-          return !targetEndDate || new Date(targetEndDate) >= new Date().setHours(0,0,0,0);
-        };
+  if (email || role || isActive !== undefined || endDate !== undefined) {
+    const calculateIsActive = () => {
+      if (isActive !== undefined) return isActive;
+      const targetEndDate = endDate !== undefined ? endDate : employee.endDate;
+      return !hasEndDate(targetEndDate);
+    };
 
-        const updateData = {
-          ...(email && { email }),
-          isActive: calculateIsActive(),
-        };
-        if (role) {
-          const roleRecord = await tx.role.findUnique({ where: { name: role } });
-          if (roleRecord) updateData.roleId = roleRecord.id;
-        }
-        await tx.user.update({
-          where: { id: employee.userId },
-          data: updateData,
-        });
+    const updateData = {
+      ...(email && { email }),
+      isActive: calculateIsActive(),
+    };
+
+    if (role) {
+      const roleRecord = await prisma.role.findUnique({ where: { name: role } });
+      if (roleRecord) updateData.roleId = roleRecord.id;
     }
 
-    const updatedEmployee = await tx.employee.update({
-      where: { id: parseInt(id) },
-      data: {
-        ...(firstName && { firstName }),
-        ...(lastName && { lastName }),
-        ...(phone !== undefined && phone !== '' && { phone }),
-        ...(isValidDate(dateOfBirth) && { dateOfBirth: new Date(dateOfBirth) }),
-        ...(gender && { gender }),
-        ...(address !== undefined && { address: address || null }),
-        ...(nationalId !== undefined && { nationalId: nationalId || null }),
-        ...(profileImageUrl !== undefined && { profileImageUrl: profileImageUrl || null }),
-        ...(jobTitle && { jobTitle }),
-        ...(specialization && { specialization }),
-        ...(licenseNumber && { licenseNumber }),
-        ...(isValidDate(licenseExpiry) ? { licenseExpiry: new Date(licenseExpiry) } : licenseExpiry === '' ? { licenseExpiry: null } : {}),
-        ...(isValidDate(visaExpiry) ? { visaExpiry: new Date(visaExpiry) } : visaExpiry === '' ? { visaExpiry: null } : {}),
-        ...(isValidDate(workPermitExpiry) ? { workPermitExpiry: new Date(workPermitExpiry) } : workPermitExpiry === '' ? { workPermitExpiry: null } : {}),
-        ...(employmentType && { employmentType }),
-        ...(status && { status }),
-        ...(isValidDate(joiningDate) && { joiningDate: new Date(joiningDate) }),
-        ...(endDate !== undefined && { endDate: isValidDate(endDate) ? new Date(endDate) : null }),
-        ...(basicSalary !== undefined && basicSalary !== '' && { basicSalary: parseFloat(basicSalary) || 0 }),
-        ...(notes !== undefined && { notes: notes || null }),
-      },
-      include: { user: true, documents: true },
+    await prisma.user.update({
+      where: { id: employee.userId },
+      data: updateData,
     });
+  }
 
-    if (documents && Array.isArray(documents)) {
-      const existingDocs = await tx.document.findMany({ where: { employeeId: parseInt(id) } });
-      const existingUrls = existingDocs.map(d => d.fileUrl);
-      
-      for (const d of documents) {
-        const docUrl = typeof d === 'object' ? d.fileUrl : d;
-        if (!docUrl || existingUrls.includes(docUrl)) continue;
-        const fileName = docUrl.split('/').pop() || 'document';
-        await tx.document.create({
-          data: {
-            title: `ID/Doc - ${updatedEmployee.firstName}`,
-            fileName: fileName,
-            fileUrl: docUrl,
-            fileType: fileName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
-            category: 'ID',
-            employeeId: updatedEmployee.id
-          }
-        });
-      }
+  const targetHasEndDate = endDate !== undefined ? hasEndDate(endDate) : hasEndDate(employee.endDate);
+  const statusUpdate = endDate !== undefined
+    ? (targetHasEndDate ? 'INACTIVE' : 'ACTIVE')
+    : (status || undefined);
+  const updatedEmployee = await prisma.employee.update({
+    where: { id: empId },
+    data: {
+      ...(firstName && { firstName }),
+      ...(lastName && { lastName }),
+      ...(phone !== undefined && phone !== '' && { phone }),
+      ...(isValidDate(dateOfBirth) && { dateOfBirth: new Date(dateOfBirth) }),
+      ...(gender && { gender }),
+      ...(address !== undefined && { address: address || null }),
+      ...(nationalId !== undefined && { nationalId: nationalId || null }),
+      ...(profileImageUrl !== undefined && { profileImageUrl: profileImageUrl || null }),
+      ...(scheduleColor !== undefined && { scheduleColor: scheduleColor || null }),
+      ...(jobTitle && { jobTitle }),
+      ...(specialization && { specialization }),
+      ...(licenseNumber && { licenseNumber }),
+      ...(isValidDate(licenseExpiry) ? { licenseExpiry: new Date(licenseExpiry) } : licenseExpiry === '' ? { licenseExpiry: null } : {}),
+      ...(isValidDate(visaExpiry) ? { visaExpiry: new Date(visaExpiry) } : visaExpiry === '' ? { visaExpiry: null } : {}),
+      ...(isValidDate(workPermitExpiry) ? { workPermitExpiry: new Date(workPermitExpiry) } : workPermitExpiry === '' ? { workPermitExpiry: null } : {}),
+      ...(employmentType && { employmentType }),
+      ...(statusUpdate && { status: statusUpdate }),
+      ...(isValidDate(joiningDate) && { joiningDate: new Date(joiningDate) }),
+      ...(endDate !== undefined && { endDate: isValidDate(endDate) ? new Date(endDate) : null }),
+      ...(basicSalary !== undefined && basicSalary !== '' && { basicSalary: parseFloat(basicSalary) || 0 }),
+      ...(notes !== undefined && { notes: notes || null }),
+    },
+    include: { user: true, documents: true },
+  });
+
+  if (documents && Array.isArray(documents)) {
+    const existingDocs = await prisma.document.findMany({ where: { employeeId: empId } });
+    const existingUrls = existingDocs.map(d => d.fileUrl);
+
+    for (const d of documents) {
+      const docUrl = typeof d === 'object' ? d.fileUrl : d;
+      if (!docUrl || existingUrls.includes(docUrl)) continue;
+      const fileName = docUrl.split('/').pop() || 'document';
+      await prisma.document.create({
+        data: {
+          title: `ID/Doc - ${updatedEmployee.firstName}`,
+          fileName: fileName,
+          fileUrl: docUrl,
+          fileType: fileName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg',
+          category: 'ID',
+          employeeId: updatedEmployee.id
+        }
+      });
     }
-    return updatedEmployee;
+  }
+
+  return updatedEmployee;
+};
+
+const updateScheduleColor = async (id, scheduleColor) => {
+  return await prisma.employee.update({
+    where: { id: parseInt(id) },
+    data: { scheduleColor: scheduleColor || null },
+    include: {
+      user: {
+        include: { role: true }
+      },
+      documents: true
+    },
   });
 };
 
@@ -242,7 +284,8 @@ const deleteEmployee = async (id) => {
 const getDentists = async () => {
     const dentists = await prisma.employee.findMany({
         where: {
-            user: { role: { name: 'DENTIST' } }
+            endDate: null,
+            user: { role: { name: 'DENTIST' }, isActive: true }
         },
         include: { user: { include: { role: true } } }
     });
@@ -296,6 +339,7 @@ module.exports = {
   getEmployeeById,
   createEmployee,
   updateEmployee,
+  updateScheduleColor,
   deleteEmployee,
   getDentists,
   importEmployees

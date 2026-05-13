@@ -16,17 +16,46 @@ const getLaboratoryById = async (id) => {
   });
 };
 
-const createLaboratory = async (labData) => {
-  return await prisma.laboratory.create({
-    data: labData,
+const buildLaboratoryData = (labData) => {
+  const data = {};
+  ['name', 'contactName', 'phone', 'email', 'address', 'notes', 'isActive'].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(labData, field)) {
+      data[field] = labData[field];
+    }
   });
+  return data;
+};
+
+const createLaboratory = async (labData) => {
+  const { logoUrl } = labData;
+  const data = buildLaboratoryData(labData);
+
+  const lab = await prisma.laboratory.create({
+    data,
+  });
+
+  if (Object.prototype.hasOwnProperty.call(labData, 'logoUrl')) {
+    await prisma.$executeRaw`UPDATE laboratories SET logo_url = ${logoUrl || null} WHERE id = ${lab.id}`;
+  }
+
+  return { ...lab, logoUrl: logoUrl || null };
 };
 
 const updateLaboratory = async (id, labData) => {
-  return await prisma.laboratory.update({
-    where: { id: parseInt(id) },
-    data: labData,
+  const labId = parseInt(id);
+  const { logoUrl } = labData;
+  const data = buildLaboratoryData(labData);
+
+  const lab = await prisma.laboratory.update({
+    where: { id: labId },
+    data,
   });
+
+  if (Object.prototype.hasOwnProperty.call(labData, 'logoUrl')) {
+    await prisma.$executeRaw`UPDATE laboratories SET logo_url = ${logoUrl || null} WHERE id = ${labId}`;
+  }
+
+  return { ...lab, logoUrl: logoUrl ?? lab.logoUrl ?? null };
 };
 
 const deleteLaboratory = async (id) => {
@@ -41,7 +70,7 @@ const deleteLaboratory = async (id) => {
   }
 
   return await prisma.laboratory.delete({
-    where: { id: labId },
+    where: { id: parseInt(id) },
   });
 };
 

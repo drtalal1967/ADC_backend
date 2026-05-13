@@ -2,18 +2,6 @@ const scheduleService = require('../services/schedule.service');
 
 const createSchedule = async (req, res, next) => {
   try {
-    const role =
-      req.user?.role?.name?.toUpperCase?.() ||
-      req.user?.role?.toUpperCase?.() ||
-      req.user?.roleName?.toUpperCase?.() ||
-      "";
-
-    if (!["ADMIN", "SECRETARY"].includes(role)) {
-      return res.status(403).json({
-        message: "You are not allowed to create schedules"
-      });
-    }
-
     const schedule = await scheduleService.createSchedule(req.body);
     res.status(201).json(schedule);
   } catch (error) {
@@ -23,18 +11,6 @@ const createSchedule = async (req, res, next) => {
 
 const createManySchedules = async (req, res, next) => {
   try {
-    const role =
-      req.user?.role?.name?.toUpperCase?.() ||
-      req.user?.role?.toUpperCase?.() ||
-      req.user?.roleName?.toUpperCase?.() ||
-      "";
-
-    if (!["ADMIN", "SECRETARY"].includes(role)) {
-      return res.status(403).json({
-        message: "You are not allowed to create schedules"
-      });
-    }
-
     const result = await scheduleService.createManySchedules(req.body);
     res.status(201).json(result);
   } catch (error) {
@@ -82,6 +58,15 @@ const getSchedules = async (req, res, next) => {
         employeeName: s.employee
           ? `${s.employee.firstName} ${s.employee.lastName}`
           : 'Unknown',
+        employee: s.employee ? {
+          id: s.employee.id,
+          firstName: s.employee.firstName,
+          lastName: s.employee.lastName,
+          branch: s.employee.branch,
+          jobTitle: s.employee.jobTitle,
+          specialization: s.employee.specialization,
+          scheduleColor: s.employee.scheduleColor,
+        } : null,
         branch: s.branch,
         title: s.title || 'Work Shift',
         shiftType: s.scheduleType || 'SHIFT',
@@ -100,18 +85,6 @@ const getSchedules = async (req, res, next) => {
 
 const updateSchedule = async (req, res, next) => {
   try {
-    const role =
-      req.user?.role?.name?.toUpperCase?.() ||
-      req.user?.role?.toUpperCase?.() ||
-      req.user?.roleName?.toUpperCase?.() ||
-      "";
-
-    if (!["ADMIN", "SECRETARY"].includes(role)) {
-      return res.status(403).json({
-        message: "You are not allowed to update schedules"
-      });
-    }
-
     const schedule = await scheduleService.updateSchedule(req.params.id, req.body);
     res.json(schedule);
   } catch (error) {
@@ -121,20 +94,17 @@ const updateSchedule = async (req, res, next) => {
 
 const deleteSchedule = async (req, res, next) => {
   try {
-    const role =
-      req.user?.role?.name?.toUpperCase?.() ||
-      req.user?.role?.toUpperCase?.() ||
-      req.user?.roleName?.toUpperCase?.() ||
-      "";
-
-    if (!["ADMIN", "SECRETARY"].includes(role)) {
-      return res.status(403).json({
-        message: "You are not allowed to delete schedules"
-      });
-    }
-
     await scheduleService.deleteSchedule(req.params.id);
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendScheduleEmails = async (req, res, next) => {
+  try {
+    const result = await scheduleService.sendScheduleEmails(req.body);
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -146,4 +116,5 @@ module.exports = {
   getSchedules,
   updateSchedule,
   deleteSchedule,
+  sendScheduleEmails,
 };
