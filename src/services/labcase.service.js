@@ -1,6 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const normalizeLabCaseStatus = (status) => {
+  if (!status) return undefined;
+  const value = String(status).trim().toUpperCase().replace(/\s+/g, '_');
+  const allowed = new Set(['PENDING', 'PICKED_UP', 'IN_LAB', 'DELIVERED', 'COMPLETED', 'CANCELLED']);
+  return allowed.has(value) ? value : undefined;
+};
+
 const getAllLabCases = async (user) => {
   const where = {};
 
@@ -61,7 +68,7 @@ const createLabCase = async (labCaseData) => {
     patientNumber: labCaseData.patientNumber,
     toothNumbers: String(labCaseData.toothNumbers),
     prosthesisType: labCaseData.prosthesisType,
-    status: labCaseData.status,
+    status: normalizeLabCaseStatus(labCaseData.status),
     cost: Number(labCaseData.cost) || 0,
     branch: labCaseData.branch || null,
   };
@@ -101,17 +108,22 @@ const updateLabCase = async (id, labCaseData, user) => {
 
   const { dentistId, labId } = labCaseData;
 
-  const updateData = {
-    patientName: labCaseData.patientName,
-    patientNumber: labCaseData.patientNumber,
-    toothNumbers: String(labCaseData.toothNumbers),
-    prosthesisType: labCaseData.prosthesisType,
-    status: labCaseData.status,
-    cost: Number(labCaseData.cost) || 0,
-    expectedDate: labCaseData.expectedDate
-  ? new Date(labCaseData.expectedDate)
-  : null,
-  };
+  const updateData = {};
+
+  if (labCaseData.patientName !== undefined) updateData.patientName = labCaseData.patientName;
+  if (labCaseData.patientNumber !== undefined) updateData.patientNumber = labCaseData.patientNumber;
+  if (labCaseData.toothNumbers !== undefined) updateData.toothNumbers = String(labCaseData.toothNumbers);
+  if (labCaseData.prosthesisType !== undefined) updateData.prosthesisType = labCaseData.prosthesisType;
+  if (labCaseData.status !== undefined) {
+    const normalizedStatus = normalizeLabCaseStatus(labCaseData.status);
+    if (normalizedStatus) updateData.status = normalizedStatus;
+  }
+  if (labCaseData.cost !== undefined) updateData.cost = Number(labCaseData.cost) || 0;
+  if (labCaseData.expectedDate !== undefined) {
+    updateData.expectedDate = labCaseData.expectedDate
+      ? new Date(labCaseData.expectedDate)
+      : null;
+  }
 
   if (dentistId) {
     updateData.dentist = {
