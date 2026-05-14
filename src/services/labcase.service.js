@@ -14,6 +14,8 @@ const parseOptionalDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
+const generateLabCaseNumber = () => `LC-${Date.now()}`;
+
 const getAllLabCases = async (user) => {
   const where = {};
 
@@ -81,6 +83,7 @@ const createLabCase = async (labCaseData) => {
   }
 
   const data = {
+    caseNumber: labCaseData.caseNumber || generateLabCaseNumber(),
     patientName: labCaseData.patientName,
     patientNumber: labCaseData.patientNumber,
     toothNumbers: labCaseData.toothNumbers !== undefined ? String(labCaseData.toothNumbers) : null,
