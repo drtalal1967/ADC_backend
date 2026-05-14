@@ -8,6 +8,12 @@ const normalizeLabCaseStatus = (status) => {
   return allowed.has(value) ? value : undefined;
 };
 
+const parseOptionalDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 const getAllLabCases = async (user) => {
   const where = {};
 
@@ -62,42 +68,37 @@ const getLabCaseById = async (id, user) => {
 
 const createLabCase = async (labCaseData) => {
   const { dentistId, labId } = labCaseData;
+  const normalizedStatus = normalizeLabCaseStatus(labCaseData.status);
+  const dentistNumericId = Number(dentistId);
+  const labNumericId = Number(labId);
+
+  if (!Number.isInteger(dentistNumericId) || dentistNumericId <= 0) {
+    throw new Error('Dentist is required');
+  }
+
+  if (!Number.isInteger(labNumericId) || labNumericId <= 0) {
+    throw new Error('Laboratory is required');
+  }
 
   const data = {
     patientName: labCaseData.patientName,
     patientNumber: labCaseData.patientNumber,
-    toothNumbers: String(labCaseData.toothNumbers),
+    toothNumbers: labCaseData.toothNumbers !== undefined ? String(labCaseData.toothNumbers) : null,
     prosthesisType: labCaseData.prosthesisType,
-    status: normalizeLabCaseStatus(labCaseData.status),
     cost: Number(labCaseData.cost) || 0,
     branch: labCaseData.branch || null,
+    dentist: { connect: { id: dentistNumericId } },
+    laboratory: { connect: { id: labNumericId } },
   };
 
-  if (dentistId) {
-    data.dentist = { connect: { id: Number(dentistId) } };
-  }
+  if (normalizedStatus) data.status = normalizedStatus;
 
-  if (labId) {
-    data.laboratory = { connect: { id: Number(labId) } };
-  }
-
-  // map dueDate → expectedDate
-  if (labCaseData.dueDate) {
-    const d = new Date(labCaseData.dueDate);
-    if (!isNaN(d.getTime())) {
-      data.expectedDate = d;
-    }
-  }
+  const expectedDate = parseOptionalDate(labCaseData.expectedDate || labCaseData.dueDate);
+  if (expectedDate) data.expectedDate = expectedDate;
 
   return await prisma.labCase.create({
-  data: {
-    ...data,
-
-    expectedDate: data.expectedDate
-      ? new Date(data.expectedDate)
-      : null,
-  }
-});
+    data
+  });
 };
 
 const updateLabCase = async (id, labCaseData, user) => {
