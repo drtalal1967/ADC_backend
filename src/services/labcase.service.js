@@ -178,7 +178,7 @@ const createCaseLog = async (labCaseId, logData, user) => {
     throw new Error('Lab case not found or access denied');
   }
 
-  const log = await prisma.caseLog.create({
+  return await prisma.caseLog.create({
     data: {
       labCaseId: parseInt(labCaseId),
       type: logData.type,
@@ -187,19 +187,6 @@ const createCaseLog = async (labCaseId, logData, user) => {
       createdBy: user.id,
     },
   });
-
-  let newStatus;
-  if (logData.type === 'Pickup') newStatus = 'PICKED_UP';
-  if (logData.type === 'Delivery') newStatus = 'COMPLETED';
-
-  if (newStatus) {
-    await prisma.labCase.update({
-      where: { id: parseInt(labCaseId) },
-      data: { status: newStatus }
-    });
-  }
-
-  return log;
 };
 
 const getCaseLogs = async (labCaseId, user) => {
@@ -229,25 +216,9 @@ const deleteCaseLog = async (labCaseId, logId, user) => {
     throw new Error('Log entry not found');
   }
 
-  const deletedLog = await prisma.caseLog.delete({
+  return await prisma.caseLog.delete({
     where: { id: parseInt(logId) }
   });
-
-  const latestLog = await prisma.caseLog.findFirst({
-    where: { labCaseId: parseInt(labCaseId) },
-    orderBy: { createdAt: 'desc' }
-  });
-
-  let status = 'PENDING';
-  if (latestLog?.type === 'Pickup') status = 'PICKED_UP';
-  if (latestLog?.type === 'Delivery') status = 'COMPLETED';
-
-  await prisma.labCase.update({
-    where: { id: parseInt(labCaseId) },
-    data: { status }
-  });
-
-  return deletedLog;
 };
 
 module.exports = {
