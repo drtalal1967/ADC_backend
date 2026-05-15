@@ -212,6 +212,44 @@ const getCaseLogs = async (labCaseId, user) => {
   });
 };
 
+const deleteCaseLog = async (labCaseId, logId, user) => {
+  const labCase = await getLabCaseById(labCaseId, user);
+  if (!labCase) {
+    throw new Error('Lab case not found or access denied');
+  }
+
+  const log = await prisma.caseLog.findFirst({
+    where: {
+      id: parseInt(logId),
+      labCaseId: parseInt(labCaseId)
+    }
+  });
+
+  if (!log) {
+    throw new Error('Log entry not found');
+  }
+
+  const deletedLog = await prisma.caseLog.delete({
+    where: { id: parseInt(logId) }
+  });
+
+  const latestLog = await prisma.caseLog.findFirst({
+    where: { labCaseId: parseInt(labCaseId) },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  let status = 'PENDING';
+  if (latestLog?.type === 'Pickup') status = 'PICKED_UP';
+  if (latestLog?.type === 'Delivery') status = 'COMPLETED';
+
+  await prisma.labCase.update({
+    where: { id: parseInt(labCaseId) },
+    data: { status }
+  });
+
+  return deletedLog;
+};
+
 module.exports = {
   getAllLabCases,
   getLabCaseById,
@@ -220,4 +258,5 @@ module.exports = {
   deleteLabCase,
   createCaseLog,
   getCaseLogs,
+  deleteCaseLog,
 };

@@ -64,6 +64,15 @@ const getCaseLogs = async (req, res, next) => {
   }
 };
 
+const deleteCaseLog = async (req, res, next) => {
+  try {
+    await labCaseService.deleteCaseLog(req.params.id, req.params.logId, req.user);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getLabCasePayments = async (req, res, next) => {
   try {
     const labCase = await labCaseService.getLabCaseById(req.params.id, req.user);
@@ -81,5 +90,6 @@ module.exports = {
   deleteLabCase,
   createCaseLog,
   getCaseLogs,
+  deleteCaseLog,
   getLabCasePayments,
 };
