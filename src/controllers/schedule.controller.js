@@ -125,6 +125,15 @@ const deleteSchedule = async (req, res, next) => {
   }
 };
 
+const deleteSchedulesByRange = async (req, res, next) => {
+  try {
+    const result = await scheduleService.deleteSchedulesByRange(req.body, req.user);
+    res.json({ deleted: result.count || 0 });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const sendScheduleEmails = async (req, res, next) => {
   try {
     const result = await scheduleService.sendScheduleEmails(req.body);
@@ -140,5 +149,6 @@ module.exports = {
   getSchedules,
   updateSchedule,
   deleteSchedule,
+  deleteSchedulesByRange,
   sendScheduleEmails,
 };

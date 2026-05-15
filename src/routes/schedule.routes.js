@@ -18,6 +18,7 @@ router.post('/send-email', checkAnyPermission([
   { module: 'schedule', action: 'update' },
 ]), scheduleController.sendScheduleEmails);
 router.put('/:id', checkPermission('schedule', 'update'), scheduleController.updateSchedule);
+router.post('/bulk-delete', checkPermission('schedule', 'delete'), scheduleController.deleteSchedulesByRange);
 router.delete('/:id', checkPermission('schedule', 'delete'), scheduleController.deleteSchedule);
 
 module.exports = router;

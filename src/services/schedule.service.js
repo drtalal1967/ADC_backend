@@ -205,6 +205,46 @@ const deleteSchedule = async (id) => {
   });
 };
 
+const deleteSchedulesByRange = async (filters = {}, user = null) => {
+  const { startDate, endDate, employeeId, branch } = filters;
+  if (!startDate || !endDate) {
+    throw new Error('Start date and end date are required');
+  }
+  if (startDate > endDate) {
+    throw new Error('Start date must be before end date');
+  }
+
+  const todayKey = toDateKey(new Date());
+  const isAdmin = user?.role?.name === 'ADMIN';
+  if (startDate < todayKey && !isAdmin) {
+    throw new Error('Only Admin can delete past schedules');
+  }
+
+  const where = {
+    startTime: {
+      gte: parseBahrainDateTime(startDate, '00:00'),
+      lte: parseBahrainDateTime(endDate, '23:59'),
+    },
+  };
+
+  if (employeeId && employeeId !== 'All') {
+    where.employeeId = parseInt(employeeId);
+  }
+
+  if (branch && branch !== 'All Branches' && branch !== 'All') {
+    const branchValue = normalizeBranch(branch);
+    const branchTitle = `${branchValue.charAt(0).toUpperCase()}${branchValue.slice(1)}`;
+    where.OR = [
+      { branch },
+      { branch: branchValue },
+      { branch: branchTitle },
+      { branch: `${branchTitle} Branch` },
+    ];
+  }
+
+  return await prisma.schedule.deleteMany({ where });
+};
+
 const getTimeHours = (start, end) => {
   const startDate = start instanceof Date ? start : new Date(start);
   const endDate = end instanceof Date ? end : new Date(end);
@@ -505,5 +545,6 @@ module.exports = {
   getSchedules,
   updateSchedule,
   deleteSchedule,
+  deleteSchedulesByRange,
   sendScheduleEmails,
 };
