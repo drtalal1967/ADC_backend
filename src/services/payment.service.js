@@ -106,7 +106,7 @@ const createPayment = async (data) => {
         where: { id: expenseId },
         data: {
           paymentStatus: newStatus,
-          status: newStatus === "PAID" ? "PAID" : updated.status
+          status: newStatus === "PAID" ? "PAID" : "PENDING"
         }
       });
 
@@ -272,7 +272,7 @@ const updatePayment = async (id, data) => {
         data: {
           amountPaid: newPaid,
           paymentStatus: newStatus,
-          status: newStatus === "PAID" ? "PAID" : (existing.expense.status === "PAID" ? "APPROVED" : existing.expense.status)
+          status: newStatus === "PAID" ? "PAID" : "PENDING"
         }
       });
     }
@@ -329,7 +329,7 @@ const deletePayment = async (id) => {
         data: {
           amountPaid: newPaid,
           paymentStatus: newStatus,
-          status: newStatus === "PAID" ? "PAID" : (payment.expense.status === "PAID" ? "APPROVED" : payment.expense.status)
+          status: newStatus === "PAID" ? "PAID" : "PENDING"
         }
       });
     }
