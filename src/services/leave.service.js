@@ -7,6 +7,35 @@ const LEAVE_TYPES = [
   'EMERGENCY', 'UNPAID', 'MATERNITY', 'PATERNITY', 'CASUAL'
 ];
 
+const SICK_LEAVE_YEARLY_DAYS = 15;
+const BAHRAIN_TIME_ZONE = 'Asia/Bahrain';
+
+const getBahrainDateParts = (value = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: BAHRAIN_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(value);
+
+  return {
+    year: Number(parts.find(part => part.type === 'year')?.value),
+    month: Number(parts.find(part => part.type === 'month')?.value),
+    day: Number(parts.find(part => part.type === 'day')?.value),
+  };
+};
+
+const isLeapYear = (year) => year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+
+const isEmploymentAnniversary = (joiningDate, todayParts) => {
+  if (!joiningDate || !todayParts?.year) return false;
+  const joined = getBahrainDateParts(joiningDate);
+
+  if (joined.month === todayParts.month && joined.day === todayParts.day) return true;
+
+  // Employees who joined on Feb 29 receive the yearly grant on Feb 28 in non-leap years.
+  return joined.month === 2 && joined.day === 29 && todayParts.month === 2 && todayParts.day === 28 && !isLeapYear(todayParts.year);
+};
 const pivotBalances = (balances, employee) => {
   const result = {
     employeeId: employee.id,
@@ -280,6 +309,57 @@ const runMonthlyAutoUpdate = async () => {
   });
 };
 
+const runYearlySickLeaveUpdate = async (referenceDate = new Date()) => {
+  const todayParts = getBahrainDateParts(referenceDate);
+  const year = todayParts.year;
+  const employees = await prisma.employee.findMany({
+    where: { status: 'ACTIVE', joiningDate: { not: null } },
+    select: { id: true, firstName: true, lastName: true, joiningDate: true },
+  });
+
+  const eligibleEmployees = employees.filter(employee => isEmploymentAnniversary(employee.joiningDate, todayParts));
+  console.log(`Running yearly sick leave update for ${eligibleEmployees.length} anniversary employee(s)...`);
+
+  const result = { checked: employees.length, granted: 0, skipped: employees.length - eligibleEmployees.length };
+
+  await prisma.$transaction(async (tx) => {
+    for (const employee of eligibleEmployees) {
+      const sick = await tx.leaveBalance.findUnique({
+        where: { employeeId_leaveType_year: { employeeId: employee.id, leaveType: 'SICK', year } }
+      });
+
+      if (!sick) {
+        await tx.leaveBalance.create({
+          data: {
+            employeeId: employee.id,
+            leaveType: 'SICK',
+            year,
+            totalAllotted: SICK_LEAVE_YEARLY_DAYS,
+            totalUsed: 0,
+            totalRemaining: SICK_LEAVE_YEARLY_DAYS,
+          }
+        });
+        result.granted += 1;
+        continue;
+      }
+
+      const topUp = Math.max(0, SICK_LEAVE_YEARLY_DAYS - sick.totalAllotted);
+      if (topUp > 0) {
+        await tx.leaveBalance.update({
+          where: { id: sick.id },
+          data: {
+            totalAllotted: sick.totalAllotted + topUp,
+            totalRemaining: sick.totalRemaining + topUp,
+          }
+        });
+        result.granted += 1;
+      }
+    }
+  });
+
+  return result;
+};
+
 const getAllLeaveRequests = async () => {
   return await prisma.leaveRequest.findMany({
     include: { employee: true },
@@ -346,6 +426,7 @@ module.exports = {
   getEmployeeBalance,
   updateEmployeeBalances,
   runMonthlyAutoUpdate,
+  runYearlySickLeaveUpdate,
   deleteLeaveRequest,
   deleteLeaveBalance
 };

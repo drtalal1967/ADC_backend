@@ -14,7 +14,17 @@ const initCron = () => {
     }
   }, { timezone: 'Asia/Bahrain' });
 
-  // ─── 2. Daily Reminder Email Blast (Every day at 8:00 AM) ───
+  // 2. Yearly Sick Leave Update (Every day at 00:30; applies only on employment anniversaries)
+  cron.schedule('30 0 * * *', async () => {
+    try {
+      const result = await leaveService.runYearlySickLeaveUpdate();
+      console.log(`Cron: Yearly sick leave update completed. Granted: ${result.granted}.`);
+    } catch (error) {
+      console.error('Cron Error: Yearly sick leave update failed:', error);
+    }
+  }, { timezone: 'Asia/Bahrain' });
+
+  // ─── 3. Daily Reminder Email Blast (Every day at 8:00 AM) ───
   cron.schedule('0 8 * * *', async () => {
     console.log('Cron: Running daily reminder email check...');
     try {
@@ -45,6 +55,7 @@ const initCron = () => {
   }, { timezone: 'Asia/Bahrain' });
 
   console.log('Cron: Monthly leave update scheduled (1st of every month).');
+  console.log('Cron: Yearly sick leave update scheduled (daily anniversary check at 00:30).');
   console.log('Cron: Daily reminder email scheduled (every day at 8:00 AM).');
 };
 
