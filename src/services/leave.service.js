@@ -291,8 +291,42 @@ const getAllLeaveRequests = async () => {
 };
 
 const deleteLeaveRequest = async (id) => {
-  return await prisma.leaveRequest.delete({
-    where: { id: leaveRequestId }
+  const leaveRequestId = parseInt(id, 10);
+  if (!Number.isFinite(leaveRequestId)) throw new Error('Invalid leave request id');
+
+  return await prisma.$transaction(async (tx) => {
+    const leaveRequest = await tx.leaveRequest.findUnique({
+      where: { id: leaveRequestId },
+    });
+
+    if (!leaveRequest) throw new Error('Leave request not found');
+
+    if (leaveRequest.status === 'APPROVED') {
+      const year = leaveRequest.startDate.getFullYear();
+      const balance = await tx.leaveBalance.findUnique({
+        where: {
+          employeeId_leaveType_year: {
+            employeeId: leaveRequest.employeeId,
+            leaveType: leaveRequest.leaveType,
+            year,
+          },
+        },
+      });
+
+      if (balance) {
+        await tx.leaveBalance.update({
+          where: { id: balance.id },
+          data: {
+            totalUsed: Math.max(0, balance.totalUsed - leaveRequest.totalDays),
+            totalRemaining: balance.totalRemaining + leaveRequest.totalDays,
+          },
+        });
+      }
+    }
+
+    return tx.leaveRequest.delete({
+      where: { id: leaveRequestId },
+    });
   });
 };
 
