@@ -280,8 +280,8 @@ const updateLeaveStatus = async (id, statusData) => {
   return updatedRequest;
 };
 
-const runMonthlyAutoUpdate = async () => {
-  const year = new Date().getFullYear();
+const runMonthlyAutoUpdate = async (referenceDate = new Date()) => {
+  const year = getBahrainDateParts(referenceDate).year;
   const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' } });
 
   console.log(`Running monthly annual leave increment for ${employees.length} employees...`);
