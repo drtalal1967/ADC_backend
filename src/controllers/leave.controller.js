@@ -43,6 +43,17 @@ const getLeaveBalances = async (req, res, next) => {
 const getEmployeeBalance = async (req, res, next) => {
   try {
     const { employeeId } = req.params;
+    const requestedEmployeeId = Number(employeeId);
+    const ownEmployeeId = Number(req.user?.employee?.id || req.user?.employeeId);
+    const roleName = String(req.user?.role?.name || '').toUpperCase();
+    const canViewAllBalances = roleName === 'ADMIN' || Boolean(
+      req.user?.role?.permissions?.find(p => p.module === 'leave_balance')?.canView
+    );
+
+    if (!canViewAllBalances && requestedEmployeeId !== ownEmployeeId) {
+      return res.status(403).json({ message: 'You can only view your own leave balance' });
+    }
+
     const balance = await leaveService.getEmployeeBalance(employeeId);
     res.json(balance);
   } catch (error) {

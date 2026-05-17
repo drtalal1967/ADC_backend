@@ -14,7 +14,7 @@ router.delete('/:id', leaveController.deleteLeaveRequest);
 
 // Leave Balances
 router.get('/balances', checkPermission('leave_balance', 'view'), leaveController.getLeaveBalances);
-router.get('/balances/:employeeId', checkPermission('leave_balance', 'view'), leaveController.getEmployeeBalance);
+router.get('/balances/:employeeId', leaveController.getEmployeeBalance);
 router.put('/balances/:employeeId', checkPermission('leave_balance', 'update'), leaveController.updateEmployeeBalances);
 router.post('/balances/monthly-update', authorize('ADMIN'), leaveController.runMonthlyUpdate);
 
