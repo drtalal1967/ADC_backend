@@ -21,9 +21,18 @@ const updateLeaveStatus = async (req, res, next) => {
   }
 };
 
+const hasPermission = (user, module, field) => Boolean(
+  user?.role?.permissions?.find(p => p.module === module)?.[field]
+);
+
 const getAllLeaveRequests = async (req, res, next) => {
   try {
-    const leaves = await leaveService.getAllLeaveRequests();
+    const roleName = String(req.user?.role?.name || '').toUpperCase();
+    const canViewAllRequests = roleName === 'ADMIN' || hasPermission(req.user, 'leaves_all', 'canView');
+    const leaves = await leaveService.getAllLeaveRequests({
+      canViewAll: canViewAllRequests,
+      employeeId: req.user?.employee?.id || req.user?.employeeId,
+    });
     res.json(leaves);
   } catch (error) {
     next(error);
@@ -47,7 +56,7 @@ const getEmployeeBalance = async (req, res, next) => {
     const ownEmployeeId = Number(req.user?.employee?.id || req.user?.employeeId);
     const roleName = String(req.user?.role?.name || '').toUpperCase();
     const canViewAllBalances = roleName === 'ADMIN' || Boolean(
-      req.user?.role?.permissions?.find(p => p.module === 'leave_balance')?.canView
+      hasPermission(req.user, 'leave_balance', 'canView')
     );
 
     if (!canViewAllBalances && requestedEmployeeId !== ownEmployeeId) {

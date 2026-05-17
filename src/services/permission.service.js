@@ -12,6 +12,7 @@ const ALLOWED_MODULES = [
   'employees',
   'schedule',
   'leaves',
+  'leaves_all',
   'leave_balance',
   'reports',
   'reminders',

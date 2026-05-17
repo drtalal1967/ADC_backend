@@ -360,8 +360,11 @@ const runYearlySickLeaveUpdate = async (referenceDate = new Date()) => {
   return result;
 };
 
-const getAllLeaveRequests = async () => {
+const getAllLeaveRequests = async ({ canViewAll = false, employeeId } = {}) => {
+  const where = canViewAll ? {} : { employeeId: Number(employeeId) || 0 };
+
   return await prisma.leaveRequest.findMany({
+    where,
     include: { employee: true },
     orderBy: [
       { createdAt: 'desc' },
