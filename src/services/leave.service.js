@@ -203,7 +203,7 @@ const applyLeave = async (leaveData) => {
       totalDays,
       employee: { connect: { id: parseInt(employeeId) } },
     },
-    include: { employee: { include: { user: true } } },
+    include: { employee: { include: { user: true } }, documents: true },
   });
 
   sendLeaveRequestSubmittedEmail('drtalal@alawidental.com', leaveRequest).catch(err => {
@@ -265,7 +265,7 @@ const updateLeaveStatus = async (id, statusData) => {
 
   const updatedRequest = await prisma.leaveRequest.findUnique({
     where: { id: leaveRequestId },
-    include: { employee: { include: { user: true } } },
+    include: { employee: { include: { user: true } }, documents: true },
   });
 
   if (updatedRequest && ['APPROVED', 'REJECTED'].includes(updatedRequest.status)) {
@@ -365,7 +365,7 @@ const getAllLeaveRequests = async ({ canViewAll = false, employeeId } = {}) => {
 
   return await prisma.leaveRequest.findMany({
     where,
-    include: { employee: true },
+    include: { employee: true, documents: true },
     orderBy: [
       { createdAt: 'desc' },
       { id: 'desc' }

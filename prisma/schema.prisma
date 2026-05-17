@@ -392,7 +392,7 @@ model Schedule {
   createdAt    DateTime     @default(now()) @map("created_at")
   updatedAt    DateTime     @updatedAt @map("updated_at")
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee  Employee   @relation(fields: [employeeId], references: [id])
 
   @@map("schedules")
 }
@@ -416,7 +416,8 @@ model LeaveRequest {
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee  Employee   @relation(fields: [employeeId], references: [id])
+  documents Document[]
 
   @@map("leave_requests")
 }
@@ -436,7 +437,7 @@ model LeaveBalance {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee  Employee   @relation(fields: [employeeId], references: [id])
 
   @@unique([employeeId, leaveType, year])
   @@map("leave_balances")
@@ -495,6 +496,7 @@ model Document {
   paymentId    Int?             @map("payment_id")
   employeeId   Int?             @map("employee_id")
   laboratoryId Int?             @map("laboratory_id")
+  leaveRequestId Int?           @map("leave_request_id")
 
   uploadedAt   DateTime         @default(now()) @map("uploaded_at")
   createdAt    DateTime         @default(now()) @map("created_at")
@@ -506,6 +508,7 @@ model Document {
   payment    Payment?    @relation(fields: [paymentId], references: [id])
   employee   Employee?   @relation(fields: [employeeId], references: [id])
   laboratory Laboratory? @relation(fields: [laboratoryId], references: [id])
+  leaveRequest LeaveRequest? @relation(fields: [leaveRequestId], references: [id])
 
   @@map("documents")
 }

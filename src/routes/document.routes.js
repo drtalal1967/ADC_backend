@@ -47,6 +47,9 @@ const canUploadDocument = (req, res, next) => {
   if (req.body.employeeId || category.includes('employee')) {
     relatedChecks.push(['employees', ['create', 'update']]);
   }
+  if (req.body.leaveRequestId || category.includes('leave')) {
+    relatedChecks.push(['leaves', ['create', 'update']]);
+  }
 
   const allowedByRelatedModule = relatedChecks.some(([module, actions]) => hasPermission(req.user, module, actions));
 

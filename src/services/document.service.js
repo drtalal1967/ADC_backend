@@ -20,7 +20,7 @@ const categoryLabel = {
 
 // ➕ Create document
 const createDocument = async (docData) => {
-  const { vendorId, labCaseId, expenseId, paymentId, employeeId, laboratoryId, ...data } = docData;
+  const { vendorId, labCaseId, expenseId, paymentId, employeeId, laboratoryId, leaveRequestId, ...data } = docData;
 
   const connectData = {};
   if (vendorId) connectData.vendor = { connect: { id: parseInt(vendorId) } };
@@ -29,6 +29,7 @@ const createDocument = async (docData) => {
   if (paymentId) connectData.payment = { connect: { id: parseInt(paymentId) } };
   if (employeeId) connectData.employee = { connect: { id: parseInt(employeeId) } };
   if (laboratoryId) connectData.laboratory = { connect: { id: parseInt(laboratoryId) } };
+  if (leaveRequestId) connectData.leaveRequest = { connect: { id: parseInt(leaveRequestId) } };
 
   const doc = await prisma.document.create({
     data: {
@@ -42,7 +43,8 @@ const createDocument = async (docData) => {
       expense: true, 
       payment: true, 
       employee: true, 
-      laboratory: true 
+      laboratory: true,
+      leaveRequest: true 
     }
   });
 
@@ -66,7 +68,8 @@ const getAllDocuments = async () => {
       paymentId: null,
       vendorId: null,
       employeeId: null,
-      laboratoryId: null
+      laboratoryId: null,
+      leaveRequestId: null
     },
     include: { 
       vendor: true, 
@@ -74,7 +77,8 @@ const getAllDocuments = async () => {
       expense: true, 
       payment: true, 
       employee: true, 
-      laboratory: true 
+      laboratory: true,
+      leaveRequest: true 
     },
     orderBy: [
       { createdAt: 'desc' },

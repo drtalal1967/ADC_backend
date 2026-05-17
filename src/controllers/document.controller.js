@@ -7,7 +7,7 @@ const uploadDocument = async (req, res, next) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const { skipDb, source, category, title, description, vendorId, labCaseId, expenseId, paymentId, employeeId, laboratoryId, branch } = req.body;
+    const { skipDb, source, category, title, description, vendorId, labCaseId, expenseId, paymentId, employeeId, laboratoryId, leaveRequestId, branch } = req.body;
 
     // Upload to ImageKit (cloud) — req.file.buffer from memoryStorage
     const ikResult = await uploadToImageKit(
@@ -57,6 +57,7 @@ const uploadDocument = async (req, res, next) => {
       paymentId,
       employeeId,
       laboratoryId,
+      leaveRequestId,
     });
 
     res.status(201).json(document);
