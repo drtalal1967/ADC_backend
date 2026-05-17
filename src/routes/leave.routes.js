@@ -10,7 +10,7 @@ router.use(authMiddleware);
 router.get('/', checkPermission('leaves', 'view'), leaveController.getAllLeaveRequests);
 router.post('/apply', checkPermission('leaves', 'create'), leaveController.applyLeave);
 router.put('/:id/status', authorize('ADMIN'), leaveController.updateLeaveStatus);
-router.delete('/:id', checkPermission('leaves', 'delete'), leaveController.deleteLeaveRequest);
+router.delete('/:id', leaveController.deleteLeaveRequest);
 
 // Leave Balances
 router.get('/balances', checkPermission('leave_balance', 'view'), leaveController.getLeaveBalances);

@@ -9,6 +9,6 @@ router.use(authMiddleware);
 router.get('/', checkPermission('leaves', 'canView'), leaveController.getAllLeaveRequests);
 router.post('/', checkPermission('leaves', 'canCreate'), leaveController.applyLeave);
 router.put('/:id/status', authorize('ADMIN'), leaveController.updateLeaveStatus);
-router.delete('/:id', checkPermission('leaves', 'canDelete'), leaveController.deleteLeaveRequest);
+router.delete('/:id', leaveController.deleteLeaveRequest);
 
 module.exports = router;

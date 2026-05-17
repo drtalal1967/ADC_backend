@@ -71,7 +71,7 @@ const runMonthlyUpdate = async (req, res, next) => {
 
 const deleteLeaveRequest = async (req, res, next) => {
   try {
-    await leaveService.deleteLeaveRequest(req.params.id);
+    await leaveService.deleteLeaveRequest(req.params.id, req.user);
     res.json({ message: 'Leave request deleted successfully' });
   } catch (error) {
     next(error);

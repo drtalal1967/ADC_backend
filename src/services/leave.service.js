@@ -370,9 +370,13 @@ const getAllLeaveRequests = async () => {
   });
 };
 
-const deleteLeaveRequest = async (id) => {
+const deleteLeaveRequest = async (id, user) => {
   const leaveRequestId = parseInt(id, 10);
   if (!Number.isFinite(leaveRequestId)) throw new Error('Invalid leave request id');
+
+  const roleName = (user?.role?.name || '').toUpperCase();
+  const isAdmin = roleName === 'ADMIN';
+  const userEmployeeId = user?.employee?.id || user?.employeeId;
 
   return await prisma.$transaction(async (tx) => {
     const leaveRequest = await tx.leaveRequest.findUnique({
@@ -380,6 +384,20 @@ const deleteLeaveRequest = async (id) => {
     });
 
     if (!leaveRequest) throw new Error('Leave request not found');
+
+    if (!isAdmin) {
+      if (Number(leaveRequest.employeeId) !== Number(userEmployeeId)) {
+        const err = new Error('You can only delete your own leave requests');
+        err.status = 403;
+        throw err;
+      }
+
+      if (leaveRequest.status !== 'PENDING') {
+        const err = new Error('Only Admin can delete approved or processed leave requests');
+        err.status = 403;
+        throw err;
+      }
+    }
 
     if (leaveRequest.status === 'APPROVED') {
       const year = leaveRequest.startDate.getFullYear();
