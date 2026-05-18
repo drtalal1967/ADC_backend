@@ -362,6 +362,7 @@ model Payment {
   paymentDate   DateTime      @map("payment_date") @db.Date
   paymentMethod PaymentMethod @default(CASH) @map("payment_method")
   referenceNumber String?     @map("reference_number") @db.VarChar(100)
+  batchGroupId String?        @map("batch_group_id") @db.VarChar(100)
   status        PaymentStatus @default(PAID)
   notes         String?       @db.Text
   createdAt     DateTime      @default(now()) @map("created_at")
@@ -371,6 +372,7 @@ model Payment {
   labCase  LabCase?  @relation(fields: [labCaseId], references: [id])
   documents Document[]
 
+  @@index([batchGroupId])
   @@map("payments")
 }
 

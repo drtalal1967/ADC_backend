@@ -66,6 +66,7 @@ const getAllCombined = async (req, res, next) => {
         attachment: p.documents?.[0]?.fileUrl,
         notes: p.notes,
         referenceNumber: p.referenceNumber,
+        batchGroupId: p.batchGroupId,
         originalData: p,
         caseCount: 1
       };

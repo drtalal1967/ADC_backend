@@ -1,6 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const createBatchGroupId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+
 // Helper to map frontend payment methods to Prisma enums
 const mapPaymentMethod = (method) => {
   if (!method) return 'CASH';
@@ -117,6 +119,7 @@ const processBatchPayment = async (payload) => {
   let remainingBatchAmount = parseFloat(amount);
   const reversedIds = [...expenseIds];
   const batchReference = `EXP-BATCH-${Date.now()}`;
+  const batchGroupId = createBatchGroupId("EXPBATCH");
 
   const results = [];
   for (let i = 0; i < reversedIds.length; i++) {
@@ -144,6 +147,7 @@ const processBatchPayment = async (payload) => {
           paymentDate: new Date(),
           paymentMethod: mapPaymentMethod(method),
           referenceNumber: batchReference,
+          batchGroupId,
           notes: notes,
           status: 'PAID'
         }

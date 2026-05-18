@@ -1,4 +1,4 @@
-﻿const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const mapPaymentMethod = (method) => {
@@ -22,6 +22,8 @@ const getLabCasePaymentStatus = (amountPaid, totalCost) => {
   if (Number(amountPaid) <= 0) return "PENDING";
   return Number(amountPaid) >= Number(totalCost) ? "PAID" : "PARTIAL";
 };
+
+const createBatchGroupId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
 // âž• Create payment (FINAL CLEAN)
 const createPayment = async (data) => {
@@ -59,6 +61,10 @@ const createPayment = async (data) => {
 
   if (data.referenceNumber) {
     paymentData.referenceNumber = data.referenceNumber;
+  }
+
+  if (data.batchGroupId) {
+    paymentData.batchGroupId = data.batchGroupId;
   }
 
   // âœ… Relations
@@ -159,6 +165,7 @@ const processBatchPayments = async (data) => {
 
   const results = [];
   const batchReference = `LAB-BATCH-${Date.now()}`;
+  const batchGroupId = createBatchGroupId("LABBATCH");
 
   for (const caseId of caseIds) {
     const labCase = await prisma.labCase.findUnique({
@@ -180,7 +187,8 @@ const processBatchPayments = async (data) => {
       amount: dueAmount,
       method,
       notes,
-      referenceNumber: batchReference
+      referenceNumber: batchReference,
+      batchGroupId
     });
 
     results.push(payment);
@@ -247,6 +255,7 @@ const updatePayment = async (id, data) => {
     }
     if (data.notes !== undefined) updateData.notes = data.notes || "";
     if (data.referenceNumber !== undefined) updateData.referenceNumber = data.referenceNumber || null;
+    if (data.batchGroupId !== undefined) updateData.batchGroupId = data.batchGroupId || null;
     if (data.paymentDate !== undefined) updateData.paymentDate = new Date(data.paymentDate);
 
     const oldAmount = Number(existing.amount || 0);
