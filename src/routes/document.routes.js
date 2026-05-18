@@ -2,6 +2,8 @@ const express = require('express');
 const documentController = require('../controllers/document.controller');
 const upload = require('../middleware/upload.middleware');
 const { authMiddleware, checkPermission } = require('../middleware/auth.middleware');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 const router = express.Router();
 
@@ -22,12 +24,36 @@ const hasPermission = (user, module, actions) => {
   });
 };
 
-const canUploadDocument = (req, res, next) => {
+const canUploadDocument = async (req, res, next) => {
   const category = String(req.body.category || '').toLowerCase();
   const title = String(req.body.title || '').toLowerCase();
   const skipDb = ['true', '1'].includes(String(req.body.skipDb || '').toLowerCase());
 
   const relatedChecks = [];
+
+  if (req.body.leaveRequestId) {
+    const leaveRequest = await prisma.leaveRequest.findUnique({
+      where: { id: parseInt(req.body.leaveRequestId, 10) },
+      select: { id: true, employeeId: true, leaveType: true },
+    });
+
+    if (!leaveRequest) {
+      return res.status(404).json({ message: 'Leave request not found' });
+    }
+
+    const roleName = String(req.user?.role?.name || '').toUpperCase();
+    const ownEmployeeId = Number(req.user?.employee?.id || req.user?.employeeId);
+    const isAdmin = roleName === 'ADMIN';
+    const isOwner = Number(leaveRequest.employeeId) === ownEmployeeId;
+    const canCreateLeave = hasPermission(req.user, 'leaves', ['create']);
+    const canUpdateLeave = hasPermission(req.user, 'leaves', ['update']);
+
+    if (isAdmin || (isOwner && (canCreateLeave || canUpdateLeave))) {
+      return next();
+    }
+
+    return res.status(403).json({ message: 'Only Admin and the employee can upload sick leave certificates' });
+  }
 
   if (req.body.vendorId || category.includes('vendor') || (skipDb && title.includes('vendor'))) {
     relatedChecks.push(['vendors', ['create', 'update']]);
@@ -47,7 +73,7 @@ const canUploadDocument = (req, res, next) => {
   if (req.body.employeeId || category.includes('employee')) {
     relatedChecks.push(['employees', ['create', 'update']]);
   }
-  if (req.body.leaveRequestId || category.includes('leave')) {
+  if (category.includes('leave')) {
     relatedChecks.push(['leaves', ['create', 'update']]);
   }
 

@@ -32,6 +32,7 @@ const getAllLeaveRequests = async (req, res, next) => {
     const leaves = await leaveService.getAllLeaveRequests({
       canViewAll: canViewAllRequests,
       employeeId: req.user?.employee?.id || req.user?.employeeId,
+      user: req.user,
     });
     res.json(leaves);
   } catch (error) {

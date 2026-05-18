@@ -360,16 +360,30 @@ const runYearlySickLeaveUpdate = async (referenceDate = new Date()) => {
   return result;
 };
 
-const getAllLeaveRequests = async ({ canViewAll = false, employeeId } = {}) => {
-  const where = canViewAll ? {} : { employeeId: Number(employeeId) || 0 };
+const getAllLeaveRequests = async ({ canViewAll = false, employeeId, user } = {}) => {
+  const ownEmployeeId = Number(employeeId) || 0;
+  const roleName = String(user?.role?.name || '').toUpperCase();
+  const isAdmin = roleName === 'ADMIN';
+  const where = canViewAll ? {} : { employeeId: ownEmployeeId };
 
-  return await prisma.leaveRequest.findMany({
+  const requests = await prisma.leaveRequest.findMany({
     where,
     include: { employee: true, documents: true },
     orderBy: [
       { createdAt: 'desc' },
       { id: 'desc' }
     ]
+  });
+
+  return requests.map(request => {
+    const isOwner = Number(request.employeeId) === ownEmployeeId;
+    const isSickLeave = String(request.leaveType || '').toUpperCase().includes('SICK');
+
+    if (isSickLeave && !isAdmin && !isOwner) {
+      return { ...request, documents: [] };
+    }
+
+    return request;
   });
 };
 
