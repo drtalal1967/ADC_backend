@@ -3,6 +3,9 @@ const prisma = new PrismaClient();
 
 const normalizeDate = (value, fieldName = 'Holiday date') => {
   if (!value) throw new Error(`${fieldName} is required`);
+  if (value instanceof Date) {
+    return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+  }
   const datePart = String(value).slice(0, 10);
   const date = new Date(`${datePart}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) throw new Error(`Invalid ${fieldName.toLowerCase()}`);
