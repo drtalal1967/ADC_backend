@@ -277,16 +277,30 @@ const updateLeaveStatus = async (id, statusData) => {
       });
 
       if (balance) {
-        if (balance.totalRemaining < leaveRequest.totalDays) {
+        const hasHalfDayAdjustment = Number(leaveRequest.totalDays) % 1 !== 0;
+        const chargeableDays = await calculateChargeableLeaveDays(
+          normalizeLeaveDate(leaveRequest.startDate),
+          normalizeLeaveDate(leaveRequest.endDate),
+          hasHalfDayAdjustment
+        );
+
+        if (balance.totalRemaining < chargeableDays) {
           throw new Error('Insufficient balance to approve this request');
         }
         await tx.leaveBalance.update({
           where: { id: balance.id },
           data: {
-            totalUsed: balance.totalUsed + leaveRequest.totalDays,
-            totalRemaining: balance.totalRemaining - leaveRequest.totalDays,
+            totalUsed: balance.totalUsed + chargeableDays,
+            totalRemaining: balance.totalRemaining - chargeableDays,
           },
         });
+
+        if (Number(leaveRequest.totalDays) !== chargeableDays) {
+          await tx.leaveRequest.update({
+            where: { id: leaveRequestId },
+            data: { totalDays: chargeableDays },
+          });
+        }
       }
     }
 
