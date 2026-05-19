@@ -41,6 +41,7 @@ app.use('/api/leaves', require('./routes/leave.routes'));
 app.use('/api/reminders', require('./routes/reminder.routes'));
 app.use('/api/leave-requests', require('./routes/leaveRequest.routes'));
 app.use('/api/leave-balance', require('./routes/leaveBalance.routes'));
+app.use('/api/public-holidays', require('./routes/publicHoliday.routes'));
 app.use('/api/documents', require('./routes/document.routes'));
 app.use('/api/permissions', require('./routes/permission.routes'));
 app.use('/api/categories', require('./routes/category.routes'));

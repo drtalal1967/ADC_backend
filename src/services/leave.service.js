@@ -36,6 +36,49 @@ const isEmploymentAnniversary = (joiningDate, todayParts) => {
   // Employees who joined on Feb 29 receive the yearly grant on Feb 28 in non-leap years.
   return joined.month === 2 && joined.day === 29 && todayParts.month === 2 && todayParts.day === 28 && !isLeapYear(todayParts.year);
 };
+
+const normalizeLeaveDate = (value) => {
+  const datePart = String(value || '').slice(0, 10);
+  const date = new Date(`${datePart}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) throw new Error('Invalid leave date');
+  return date;
+};
+
+const toDateKey = (value) => value.toISOString().slice(0, 10);
+
+const addUtcDays = (date, days) => {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+};
+
+const countCalendarDaysInclusive = (startDate, endDate) => Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+
+const calculateChargeableLeaveDays = async (startDate, endDate, isHalfDay = false) => {
+  if (endDate < startDate) throw new Error('End date cannot be before start date');
+
+  const holidays = await prisma.publicHoliday.findMany({
+    where: {
+      date: {
+        gte: startDate,
+        lte: endDate,
+      },
+    },
+    select: { date: true },
+  });
+
+  const holidayKeys = new Set(holidays.map(holiday => toDateKey(holiday.date)));
+  let totalDays = 0;
+  for (let cursor = new Date(startDate); cursor <= endDate; cursor = addUtcDays(cursor, 1)) {
+    if (!holidayKeys.has(toDateKey(cursor))) totalDays += 1;
+  }
+
+  if (isHalfDay && totalDays > 0) {
+    totalDays -= 0.5;
+  }
+
+  return Math.max(0, totalDays);
+};
 const pivotBalances = (balances, employee) => {
   const result = {
     employeeId: employee.id,
@@ -160,15 +203,10 @@ const updateEmployeeBalances = async (employeeId, editData, user) => {
 
 const applyLeave = async (leaveData) => {
   const { employeeId, branch, isHalfDay, ...data } = leaveData;
-  const startDate = new Date(data.startDate);
-  const endDate = new Date(data.endDate);
-  let totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-  
-  if (isHalfDay) {
-    totalDays -= 0.5;
-  }
-  
-  const year = startDate.getFullYear();
+  const startDate = normalizeLeaveDate(data.startDate);
+  const endDate = normalizeLeaveDate(data.endDate);
+  const totalDays = await calculateChargeableLeaveDays(startDate, endDate, isHalfDay);
+  const year = startDate.getUTCFullYear();
 
   // Ensure balance record exists
   let balance = await prisma.leaveBalance.findUnique({

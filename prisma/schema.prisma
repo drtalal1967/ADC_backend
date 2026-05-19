@@ -428,6 +428,21 @@ model LeaveRequest {
 // LEAVE BALANCE
 // ─────────────────────────────────────────────
 
+
+model PublicHoliday {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(150)
+  date      DateTime @unique @db.Date
+  notes     String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("public_holidays")
+}
+// ---------------------------------------------
+// LEAVE BALANCE
+// ---------------------------------------------
+
 model LeaveBalance {
   id             Int       @id @default(autoincrement())
   employeeId     Int       @map("employee_id")
