@@ -45,10 +45,9 @@ const canUploadDocument = async (req, res, next) => {
     const ownEmployeeId = Number(req.user?.employee?.id || req.user?.employeeId);
     const isAdmin = roleName === 'ADMIN';
     const isOwner = Number(leaveRequest.employeeId) === ownEmployeeId;
-    const canCreateLeave = hasPermission(req.user, 'leaves', ['create']);
-    const canUpdateLeave = hasPermission(req.user, 'leaves', ['update']);
+    const isSickLeave = String(leaveRequest.leaveType || '').toUpperCase().includes('SICK');
 
-    if (isAdmin || (isOwner && (canCreateLeave || canUpdateLeave))) {
+    if (isSickLeave && (isAdmin || isOwner)) {
       return next();
     }
 
