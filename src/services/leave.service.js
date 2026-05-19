@@ -52,29 +52,32 @@ const addUtcDays = (date, days) => {
   return next;
 };
 
-const countCalendarDaysInclusive = (startDate, endDate) => Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
-const calculateChargeableLeaveDays = async (startDate, endDate, isHalfDay = false) => {
+const calculateChargeableLeaveDays = async (startDate, endDate) => {
   if (endDate < startDate) throw new Error('End date cannot be before start date');
 
   const holidays = await prisma.publicHoliday.findMany({
     where: {
-      date: {
-        gte: startDate,
-        lte: endDate,
-      },
+      AND: [
+        { date: { lte: endDate } },
+        { endDate: { gte: startDate } },
+      ],
     },
-    select: { date: true },
+    select: { date: true, endDate: true },
   });
 
-  const holidayKeys = new Set(holidays.map(holiday => toDateKey(holiday.date)));
+  const holidayKeys = new Set();
+  holidays.forEach(holiday => {
+    const first = holiday.date > startDate ? holiday.date : startDate;
+    const last = holiday.endDate < endDate ? holiday.endDate : endDate;
+    for (let cursor = new Date(first); cursor <= last; cursor = addUtcDays(cursor, 1)) {
+      holidayKeys.add(toDateKey(cursor));
+    }
+  });
+
   let totalDays = 0;
   for (let cursor = new Date(startDate); cursor <= endDate; cursor = addUtcDays(cursor, 1)) {
     if (!holidayKeys.has(toDateKey(cursor))) totalDays += 1;
-  }
-
-  if (isHalfDay && totalDays > 0) {
-    totalDays -= 0.5;
   }
 
   return Math.max(0, totalDays);
@@ -205,7 +208,7 @@ const applyLeave = async (leaveData) => {
   const { employeeId, branch, isHalfDay, ...data } = leaveData;
   const startDate = normalizeLeaveDate(data.startDate);
   const endDate = normalizeLeaveDate(data.endDate);
-  const totalDays = await calculateChargeableLeaveDays(startDate, endDate, isHalfDay);
+  const totalDays = await calculateChargeableLeaveDays(startDate, endDate);
   const year = startDate.getUTCFullYear();
 
   // Ensure balance record exists
@@ -277,11 +280,9 @@ const updateLeaveStatus = async (id, statusData) => {
       });
 
       if (balance) {
-        const hasHalfDayAdjustment = Number(leaveRequest.totalDays) % 1 !== 0;
         const chargeableDays = await calculateChargeableLeaveDays(
           normalizeLeaveDate(leaveRequest.startDate),
-          normalizeLeaveDate(leaveRequest.endDate),
-          hasHalfDayAdjustment
+          normalizeLeaveDate(leaveRequest.endDate)
         );
 
         if (balance.totalRemaining < chargeableDays) {

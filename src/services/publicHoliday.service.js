@@ -1,23 +1,33 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const normalizeDate = (value) => {
-  if (!value) throw new Error('Holiday date is required');
+const normalizeDate = (value, fieldName = 'Holiday date') => {
+  if (!value) throw new Error(`${fieldName} is required`);
   const datePart = String(value).slice(0, 10);
   const date = new Date(`${datePart}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime())) throw new Error('Invalid holiday date');
+  if (Number.isNaN(date.getTime())) throw new Error(`Invalid ${fieldName.toLowerCase()}`);
   return date;
 };
 
 const getPublicHolidays = async (filters = {}) => {
   const where = {};
-  if (filters.year) {
+
+  if (filters.start || filters.end) {
+    const start = normalizeDate(filters.start || filters.end, 'Start date');
+    const end = normalizeDate(filters.end || filters.start, 'End date');
+    where.AND = [
+      { date: { lte: end } },
+      { endDate: { gte: start } },
+    ];
+  } else if (filters.year) {
     const year = Number(filters.year);
     if (Number.isFinite(year)) {
-      where.date = {
-        gte: new Date(`${year}-01-01T00:00:00.000Z`),
-        lte: new Date(`${year}-12-31T00:00:00.000Z`),
-      };
+      const yearStart = new Date(`${year}-01-01T00:00:00.000Z`);
+      const yearEnd = new Date(`${year}-12-31T00:00:00.000Z`);
+      where.AND = [
+        { date: { lte: yearEnd } },
+        { endDate: { gte: yearStart } },
+      ];
     }
   }
 
@@ -27,25 +37,37 @@ const getPublicHolidays = async (filters = {}) => {
   });
 };
 
+const buildHolidayData = (data = {}) => {
+  const startDate = normalizeDate(data.date || data.startDate, 'Start date');
+  const endDate = normalizeDate(data.endDate || data.date || data.startDate, 'End date');
+  if (endDate < startDate) throw new Error('Holiday end date cannot be before start date');
+
+  return {
+    name: String(data.name || '').trim() || 'Public Holiday',
+    date: startDate,
+    endDate,
+    notes: data.notes || null,
+  };
+};
+
 const createPublicHoliday = async (data) => {
-  return prisma.publicHoliday.create({
-    data: {
-      name: String(data.name || '').trim() || 'Public Holiday',
-      date: normalizeDate(data.date),
-      notes: data.notes || null,
-    },
-  });
+  return prisma.publicHoliday.create({ data: buildHolidayData(data) });
 };
 
 const updatePublicHoliday = async (id, data) => {
-  const updateData = {};
-  if (data.name !== undefined) updateData.name = String(data.name || '').trim() || 'Public Holiday';
-  if (data.date !== undefined) updateData.date = normalizeDate(data.date);
-  if (data.notes !== undefined) updateData.notes = data.notes || null;
+  const existing = await prisma.publicHoliday.findUnique({ where: { id: parseInt(id, 10) } });
+  if (!existing) throw new Error('Public holiday not found');
+
+  const next = {
+    name: data.name !== undefined ? data.name : existing.name,
+    date: data.date !== undefined || data.startDate !== undefined ? (data.date || data.startDate) : existing.date,
+    endDate: data.endDate !== undefined ? data.endDate : (data.date !== undefined || data.startDate !== undefined ? (data.date || data.startDate) : existing.endDate),
+    notes: data.notes !== undefined ? data.notes : existing.notes,
+  };
 
   return prisma.publicHoliday.update({
     where: { id: parseInt(id, 10) },
-    data: updateData,
+    data: buildHolidayData(next),
   });
 };
 

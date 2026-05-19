@@ -432,11 +432,13 @@ model LeaveRequest {
 model PublicHoliday {
   id        Int      @id @default(autoincrement())
   name      String   @db.VarChar(150)
-  date      DateTime @unique @db.Date
+  date      DateTime @db.Date
+  endDate   DateTime @map("end_date") @db.Date
   notes     String?  @db.Text
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([date, endDate])
   @@map("public_holidays")
 }
 // ---------------------------------------------
