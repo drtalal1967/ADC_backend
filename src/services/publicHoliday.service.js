@@ -20,7 +20,12 @@ const getPublicHolidays = async (filters = {}) => {
     const end = normalizeDate(filters.end || filters.start, 'End date');
     where.AND = [
       { date: { lte: end } },
-      { endDate: { gte: start } },
+      {
+        OR: [
+          { endDate: { gte: start } },
+          { endDate: null, date: { gte: start } },
+        ],
+      },
     ];
   } else if (filters.year) {
     const year = Number(filters.year);
@@ -29,7 +34,12 @@ const getPublicHolidays = async (filters = {}) => {
       const yearEnd = new Date(`${year}-12-31T00:00:00.000Z`);
       where.AND = [
         { date: { lte: yearEnd } },
-        { endDate: { gte: yearStart } },
+        {
+          OR: [
+            { endDate: { gte: yearStart } },
+            { endDate: null, date: { gte: yearStart } },
+          ],
+        },
       ];
     }
   }
