@@ -8,6 +8,7 @@ const ALLOWED_MODULES = [
   'laboratories',
   'vendors',
   'financials',
+  'lab_case_financials',
   'payments',
   'employees',
   'schedule',
