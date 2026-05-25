@@ -38,6 +38,10 @@ const isEmploymentAnniversary = (joiningDate, todayParts) => {
 };
 
 const normalizeLeaveDate = (value) => {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) throw new Error('Invalid leave date');
+    return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+  }
   const datePart = String(value || '').slice(0, 10);
   const date = new Date(`${datePart}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) throw new Error('Invalid leave date');
@@ -119,7 +123,7 @@ const pivotBalances = (balances, employee) => {
 const getLeaveBalances = async (year) => {
   const currentYear = parseInt(year) || new Date().getFullYear();
   const employees = await prisma.employee.findMany({ 
-    where: { status: 'ACTIVE' },
+    where: { status: 'ACTIVE', employmentType: 'FULL_TIME' },
     include: { user: { include: { role: true } } }
   });
   
@@ -168,6 +172,19 @@ const updateEmployeeBalances = async (employeeId, editData, user) => {
     throw new Error('You are not allowed to update these leave balances');
   }
 
+  const employee = await prisma.employee.findUnique({
+    where: { id: eid },
+    select: { id: true, employmentType: true, status: true }
+  });
+
+  if (!employee) {
+    throw new Error('Employee not found');
+  }
+
+  if (employee.employmentType === 'PART_TIME') {
+    throw new Error('Leave balances are disabled for part-time employees');
+  }
+
   await prisma.$transaction(async (tx) => {
     for (const [key, val] of entries) {
       const dbType = key.replace(/([A-Z])/g, "_$1").toUpperCase();
@@ -206,6 +223,16 @@ const updateEmployeeBalances = async (employeeId, editData, user) => {
 
 const applyLeave = async (leaveData) => {
   const { employeeId, branch, isHalfDay, ...data } = leaveData;
+  const employee = await prisma.employee.findUnique({
+    where: { id: parseInt(employeeId) },
+    select: { id: true, employmentType: true, status: true },
+  });
+  if (!employee) throw new Error('Employee not found');
+  if (employee.status !== 'ACTIVE') throw new Error('Leave requests are only available for active employees');
+  if (employee.employmentType === 'PART_TIME') {
+    throw new Error('Leave requests are disabled for part-time employees');
+  }
+
   const startDate = normalizeLeaveDate(data.startDate);
   const endDate = normalizeLeaveDate(data.endDate);
   const totalDays = await calculateChargeableLeaveDays(startDate, endDate);
@@ -268,6 +295,14 @@ const updateLeaveStatus = async (id, statusData) => {
     if (leaveRequest.status !== 'PENDING') throw new Error('Leave request already processed');
 
     if (status === 'APPROVED') {
+      const employee = await tx.employee.findUnique({
+        where: { id: leaveRequest.employeeId },
+        select: { employmentType: true, status: true },
+      });
+      if (employee?.employmentType === 'PART_TIME') {
+        throw new Error('Leave approval is disabled for part-time employees');
+      }
+
       const year = leaveRequest.startDate.getFullYear();
       const balance = await tx.leaveBalance.findUnique({
         where: {
@@ -335,7 +370,7 @@ const updateLeaveStatus = async (id, statusData) => {
 
 const runMonthlyAutoUpdate = async (referenceDate = new Date()) => {
   const year = getBahrainDateParts(referenceDate).year;
-  const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE' } });
+  const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE', employmentType: 'FULL_TIME' } });
 
   console.log(`Running monthly annual leave increment for ${employees.length} employees...`);
 
@@ -366,7 +401,7 @@ const runYearlySickLeaveUpdate = async (referenceDate = new Date()) => {
   const todayParts = getBahrainDateParts(referenceDate);
   const year = todayParts.year;
   const employees = await prisma.employee.findMany({
-    where: { status: 'ACTIVE', joiningDate: { not: null } },
+    where: { status: 'ACTIVE', employmentType: 'FULL_TIME', joiningDate: { not: null } },
     select: { id: true, firstName: true, lastName: true, joiningDate: true },
   });
 
