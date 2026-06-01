@@ -113,6 +113,22 @@ const uploadLabCaseDocument = async (req, res, next) => {
     next(error);
   }
 };
+
+const deleteLabCaseDocument = async (req, res, next) => {
+  try {
+    const labCase = await labCaseService.getLabCaseById(req.params.id, req.user);
+    if (!labCase) return res.status(404).json({ message: 'Lab case not found or access denied' });
+
+    const documentId = parseInt(req.params.documentId, 10);
+    const document = (labCase.documents || []).find(doc => Number(doc.id) === documentId);
+    if (!document) return res.status(404).json({ message: 'Attachment not found for this lab case' });
+
+    await documentService.deleteDocument(documentId);
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+};
 const getLabCasePayments = async (req, res, next) => {
   try {
     const labCase = await labCaseService.getLabCaseById(req.params.id, req.user);
@@ -132,5 +148,6 @@ module.exports = {
   getCaseLogs,
   deleteCaseLog,
   uploadLabCaseDocument,
+  deleteLabCaseDocument,
   getLabCasePayments,
 };
