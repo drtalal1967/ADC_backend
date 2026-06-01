@@ -1,4 +1,6 @@
 const labCaseService = require('../services/labcase.service');
+const documentService = require('../services/document.service');
+const { uploadToImageKit } = require('../services/imagekit.service');
 
 const getAllLabCases = async (req, res, next) => {
   try {
@@ -73,6 +75,44 @@ const deleteCaseLog = async (req, res, next) => {
   }
 };
 
+
+const uploadLabCaseDocument = async (req, res, next) => {
+  try {
+    const labCase = await labCaseService.getLabCaseById(req.params.id, req.user);
+    if (!labCase) return res.status(404).json({ message: 'Lab case not found or access denied' });
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+
+    const ikResult = await uploadToImageKit(
+      req.file.buffer,
+      req.file.originalname,
+      'dental-documents'
+    );
+
+    let uploadedBy = 'Admin';
+    if (req.user?.employee) {
+      uploadedBy = `${req.user.employee.firstName || ''} ${req.user.employee.lastName || ''}`.trim() || req.user.role?.name || 'Admin';
+    } else if (req.user?.role?.name) {
+      uploadedBy = req.user.role.name.charAt(0) + req.user.role.name.slice(1).toLowerCase();
+    }
+
+    const document = await documentService.createDocument({
+      fileName: req.file.originalname,
+      fileUrl: ikResult.url,
+      fileType: req.file.mimetype,
+      fileSizeKb: Math.round(req.file.size / 1024),
+      category: 'Lab Case',
+      title: req.body.title || req.file.originalname,
+      description: req.body.description || 'Lab case attachment',
+      branch: req.body.branch || labCase.branch || null,
+      uploadedBy,
+      labCaseId: req.params.id,
+    });
+
+    res.status(201).json(document);
+  } catch (error) {
+    next(error);
+  }
+};
 const getLabCasePayments = async (req, res, next) => {
   try {
     const labCase = await labCaseService.getLabCaseById(req.params.id, req.user);
@@ -91,5 +131,6 @@ module.exports = {
   createCaseLog,
   getCaseLogs,
   deleteCaseLog,
+  uploadLabCaseDocument,
   getLabCasePayments,
 };

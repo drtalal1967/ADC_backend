@@ -1,6 +1,7 @@
 const express = require('express');
 const labCaseController = require('../controllers/labcase.controller');
 const { authMiddleware, checkPermission } = require('../middleware/auth.middleware');
+const upload = require('../middleware/upload.middleware');
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ router.delete('/:id', checkPermission('lab_cases', 'canDelete'), labCaseControll
 
 router.get('/:id/logs', checkPermission('lab_cases', 'canView'), labCaseController.getCaseLogs);
 router.get('/:id/payments', checkPermission('lab_cases', 'canView'), labCaseController.getLabCasePayments);
+router.post('/:id/documents', checkPermission('lab_cases', 'canUpdate'), upload.single('file'), labCaseController.uploadLabCaseDocument);
 router.post('/:id/logs', checkPermission('lab_cases', 'canUpdate'), labCaseController.createCaseLog);
 router.delete('/:id/logs/:logId', checkPermission('lab_cases', 'canUpdate'), labCaseController.deleteCaseLog);
 
