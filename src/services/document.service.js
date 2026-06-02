@@ -126,13 +126,14 @@ const dedupeDocuments = (docs) => {
   const seen = new Set();
   return docs.filter((doc) => {
     const key = [
-      doc.fileUrl,
       doc.fileName,
+      doc.fileSizeKb,
       doc.title,
       doc.category,
       doc.uploadDate,
       doc.relatedType,
       doc.relatedLabel,
+      doc.uploadedBy,
     ].map(value => String(value || '').trim().toLowerCase()).join('|');
 
     if (seen.has(key)) return false;
