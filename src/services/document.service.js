@@ -122,6 +122,25 @@ const normalizeDoc = (doc) => ({
   uploadedBy: doc.uploadedBy || 'Admin',
 });
 
+const dedupeDocuments = (docs) => {
+  const seen = new Set();
+  return docs.filter((doc) => {
+    const key = [
+      doc.fileUrl,
+      doc.fileName,
+      doc.title,
+      doc.category,
+      doc.uploadDate,
+      doc.relatedType,
+      doc.relatedLabel,
+    ].map(value => String(value || '').trim().toLowerCase()).join('|');
+
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 const isAdminUser = (user) => String(user?.role?.name || '').toUpperCase() === 'ADMIN';
 const getUserEmployeeId = (user) => Number(user?.employee?.id || user?.employeeId || 0);
 
@@ -153,7 +172,7 @@ const getAllDocuments = async (user) => {
     ]
   });
 
-  return docs.map(normalizeDoc);
+  return dedupeDocuments(docs.map(normalizeDoc));
 };
 
 // ❌ Delete document
