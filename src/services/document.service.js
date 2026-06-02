@@ -40,8 +40,8 @@ const createDocument = async (docData) => {
     include: { 
       vendor: true, 
       labCase: true, 
-      expense: true, 
-      payment: true, 
+      expense: { include: { vendor: true } }, 
+      payment: { include: { expense: { include: { vendor: true } }, labCase: true } }, 
       employee: true, 
       laboratory: true,
       leaveRequest: true 
@@ -60,17 +60,22 @@ const getRelatedInfo = (doc) => {
     };
   }
   if (doc.expense) {
+    const vendorName = doc.expense.vendor?.name;
     return {
-      relatedType: 'Expense',
-      relatedId: doc.expense.id,
-      relatedLabel: doc.expense.invoiceNumber || doc.expense.description || `Expense #${doc.expense.id}`,
+      relatedType: vendorName ? 'Vendor' : 'Expense',
+      relatedId: vendorName ? doc.expense.vendorId : doc.expense.id,
+      relatedLabel: vendorName || doc.expense.invoiceNumber || doc.expense.description || `Expense #${doc.expense.id}`,
     };
   }
   if (doc.payment) {
+    const expenseVendorName = doc.payment.expense?.vendor?.name;
+    const labCaseLabel = doc.payment.labCase
+      ? `${doc.payment.labCase.patientName || 'Lab Case'}${doc.payment.labCase.patientNumber ? ` (${doc.payment.labCase.patientNumber})` : ''}`
+      : '';
     return {
-      relatedType: 'Payment',
-      relatedId: doc.payment.id,
-      relatedLabel: `Payment #${doc.payment.id}`,
+      relatedType: expenseVendorName ? 'Vendor' : (labCaseLabel ? 'Lab Case' : 'Payment'),
+      relatedId: expenseVendorName ? doc.payment.expense.vendorId : (doc.payment.labCaseId || doc.payment.id),
+      relatedLabel: expenseVendorName || labCaseLabel || `Payment #${doc.payment.id}`,
     };
   }
   if (doc.vendor) {
@@ -135,8 +140,8 @@ const getAllDocuments = async (user) => {
     include: { 
       vendor: true, 
       labCase: true, 
-      expense: true, 
-      payment: true, 
+      expense: { include: { vendor: true } }, 
+      payment: { include: { expense: { include: { vendor: true } }, labCase: true } }, 
       employee: true, 
       laboratory: true,
       leaveRequest: true 
