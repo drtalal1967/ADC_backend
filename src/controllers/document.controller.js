@@ -68,7 +68,7 @@ const uploadDocument = async (req, res, next) => {
 
 const getAllDocuments = async (req, res, next) => {
   try {
-    const documents = await documentService.getAllDocuments();
+    const documents = await documentService.getAllDocuments(req.user);
     res.json(documents || []);
   } catch (error) {
     next(error);

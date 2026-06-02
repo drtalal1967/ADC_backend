@@ -51,26 +51,87 @@ const createDocument = async (docData) => {
   return normalizeDoc(doc);
 };
 
+const getRelatedInfo = (doc) => {
+  if (doc.labCase) {
+    return {
+      relatedType: 'Lab Case',
+      relatedId: doc.labCase.id,
+      relatedLabel: `${doc.labCase.patientName || 'Lab Case'}${doc.labCase.patientNumber ? ` (${doc.labCase.patientNumber})` : ''}`,
+    };
+  }
+  if (doc.expense) {
+    return {
+      relatedType: 'Expense',
+      relatedId: doc.expense.id,
+      relatedLabel: doc.expense.invoiceNumber || doc.expense.description || `Expense #${doc.expense.id}`,
+    };
+  }
+  if (doc.payment) {
+    return {
+      relatedType: 'Payment',
+      relatedId: doc.payment.id,
+      relatedLabel: `Payment #${doc.payment.id}`,
+    };
+  }
+  if (doc.vendor) {
+    return {
+      relatedType: 'Vendor',
+      relatedId: doc.vendor.id,
+      relatedLabel: doc.vendor.name,
+    };
+  }
+  if (doc.laboratory) {
+    return {
+      relatedType: 'Laboratory',
+      relatedId: doc.laboratory.id,
+      relatedLabel: doc.laboratory.name,
+    };
+  }
+  if (doc.employee) {
+    return {
+      relatedType: 'Employee',
+      relatedId: doc.employee.id,
+      relatedLabel: `${doc.employee.firstName || ''} ${doc.employee.lastName || ''}`.trim(),
+    };
+  }
+  if (doc.leaveRequest) {
+    return {
+      relatedType: 'Leave Request',
+      relatedId: doc.leaveRequest.id,
+      relatedLabel: `${doc.leaveRequest.leaveType || 'Leave'} Request #${doc.leaveRequest.id}`,
+    };
+  }
+  return {
+    relatedType: 'Document Center',
+    relatedId: null,
+    relatedLabel: 'Document Center',
+  };
+};
+
 // 🔄 Normalize document
 const normalizeDoc = (doc) => ({
   ...doc,
+  ...getRelatedInfo(doc),
   category: categoryLabel[doc.category] || doc.category,
-  uploadDate: doc.createdAt ? doc.createdAt.toISOString().split('T')[0] : '',
+  uploadDate: doc.uploadedAt ? doc.uploadedAt.toISOString().split('T')[0] : (doc.createdAt ? doc.createdAt.toISOString().split('T')[0] : ''),
   uploadedBy: doc.uploadedBy || 'Admin',
 });
 
-// 📄 Get only DOCUMENT PAGE uploads
-const getAllDocuments = async () => {
+const isAdminUser = (user) => String(user?.role?.name || '').toUpperCase() === 'ADMIN';
+const getUserEmployeeId = (user) => Number(user?.employee?.id || user?.employeeId || 0);
+
+// 📄 Get all software attachments
+const getAllDocuments = async (user) => {
   const docs = await prisma.document.findMany({
-    where: {
-      labCaseId: null,
-      expenseId: null,
-      paymentId: null,
-      vendorId: null,
-      employeeId: null,
-      laboratoryId: null,
-      leaveRequestId: null
-    },
+    where: isAdminUser(user)
+      ? undefined
+      : {
+          OR: [
+            { leaveRequestId: null },
+            { leaveRequest: { employeeId: getUserEmployeeId(user) } },
+            { leaveRequest: { leaveType: { not: 'SICK' } } },
+          ],
+        },
     include: { 
       vendor: true, 
       labCase: true, 
@@ -81,6 +142,7 @@ const getAllDocuments = async () => {
       leaveRequest: true 
     },
     orderBy: [
+      { uploadedAt: 'desc' },
       { createdAt: 'desc' },
       { id: 'desc' }
     ]
