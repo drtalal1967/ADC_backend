@@ -36,6 +36,9 @@ const getAllLabCases = async (user) => {
       payments: {
         include: { documents: true },
         orderBy: [{ paymentDate: 'desc' }, { id: 'desc' }]
+      },
+      logs: {
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
       }
     },
     orderBy: [{ createdAt: 'desc' }, { id: 'desc' }]
