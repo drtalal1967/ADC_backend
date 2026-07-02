@@ -63,6 +63,8 @@ const updateReminder = async (req, res, next) => {
       );
       attachmentUrl = ikResult.url;
       updateData.attachmentUrl = attachmentUrl;
+    } else if (String(req.body.removeAttachment || '').toLowerCase() === 'true') {
+      updateData.attachmentUrl = null;
     }
 
     const reminder = await reminderService.updateReminder(req.params.id, updateData);
