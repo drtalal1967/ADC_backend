@@ -320,7 +320,8 @@ const updateLeaveStatus = async (id, statusData) => {
           normalizeLeaveDate(leaveRequest.endDate)
         );
 
-        if (balance.totalRemaining < chargeableDays) {
+        const leaveType = String(leaveRequest.leaveType || '').toUpperCase();
+        if (leaveType !== 'ANNUAL' && balance.totalRemaining < chargeableDays) {
           throw new Error('Insufficient balance to approve this request');
         }
         await tx.leaveBalance.update({
