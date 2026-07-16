@@ -84,7 +84,7 @@ const createEmployee = async (employeeData) => {
         email,
         passwordHash: hashedPassword,
         roleId: roleRecord?.id,
-        isActive: !hasEndDate(endDate),
+        isActive: roleRecord?.name === 'ADMIN' ? true : !hasEndDate(endDate),
       },
     });
 
@@ -107,7 +107,7 @@ const createEmployee = async (employeeData) => {
         visaExpiry: visaExpiry ? new Date(visaExpiry) : null,
         workPermitExpiry: workPermitExpiry ? new Date(workPermitExpiry) : null,
         employmentType,
-        status: hasEndDate(endDate) ? 'INACTIVE' : (status || 'ACTIVE'),
+        status: roleRecord?.name === 'ADMIN' ? (status || 'ACTIVE') : (hasEndDate(endDate) ? 'INACTIVE' : (status || 'ACTIVE')),
         joiningDate: joiningDate ? new Date(joiningDate) : new Date(),
         endDate: endDate ? new Date(endDate) : null,
         basicSalary: parseFloat(basicSalary || 0),
@@ -150,12 +150,17 @@ const updateEmployee = async (id, employeeData) => {
   } = employeeData;
 
   const empId = parseInt(id);
-  const employee = await prisma.employee.findUnique({ where: { id: empId } });
+  const employee = await prisma.employee.findUnique({
+    where: { id: empId },
+    include: { user: { include: { role: true } } }
+  });
   if (!employee) throw new Error('Employee not found');
 
   if (email || role || isActive !== undefined || endDate !== undefined) {
     const calculateIsActive = () => {
       if (isActive !== undefined) return isActive;
+      const targetRole = role || employee.user?.role?.name;
+      if (targetRole === 'ADMIN') return true;
       const targetEndDate = endDate !== undefined ? endDate : employee.endDate;
       return !hasEndDate(targetEndDate);
     };
@@ -176,10 +181,11 @@ const updateEmployee = async (id, employeeData) => {
     });
   }
 
+  const targetRole = role || employee.user?.role?.name;
   const targetHasEndDate = endDate !== undefined ? hasEndDate(endDate) : hasEndDate(employee.endDate);
-  const statusUpdate = endDate !== undefined
-    ? (targetHasEndDate ? 'INACTIVE' : 'ACTIVE')
-    : (status || undefined);
+  const statusUpdate = targetRole === 'ADMIN'
+    ? (status || 'ACTIVE')
+    : (endDate !== undefined ? (targetHasEndDate ? 'INACTIVE' : 'ACTIVE') : (status || undefined));
   const updatedEmployee = await prisma.employee.update({
     where: { id: empId },
     data: {
@@ -282,13 +288,26 @@ const deleteEmployee = async (id) => {
 };
 
 const getDentists = async () => {
-    const dentists = await prisma.employee.findMany({
+    const employees = await prisma.employee.findMany({
         where: {
-            endDate: null,
-            user: { role: { name: 'DENTIST' }, isActive: true }
+            user: { isActive: true }
         },
-        include: { user: { include: { role: true } } }
+        include: { user: { include: { role: true } } },
+        orderBy: [
+          { firstName: 'asc' },
+          { lastName: 'asc' }
+        ]
     });
+
+    const dentists = employees.filter(emp => {
+      const roleName = emp.user?.role?.name || '';
+      const clinicalText = `${emp.jobTitle || ''} ${emp.specialization || ''}`.toLowerCase();
+      const isActiveEmployee = !hasEndDate(emp.endDate);
+      const isDentistRole = roleName === 'DENTIST';
+      const isAdminDentist = roleName === 'ADMIN' && clinicalText.includes('dentist');
+      return (isActiveEmployee && isDentistRole) || isAdminDentist;
+    });
+
     return dentists.map(emp => ({
       ...emp,
       user: emp.user ? {
