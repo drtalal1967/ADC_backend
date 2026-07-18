@@ -12,6 +12,7 @@ router.post('/import', checkPermission('employees', 'canCreate'), employeeContro
 router.get('/:id', checkPermission('employees', 'canView'), employeeController.getEmployeeById);
 router.post('/', checkPermission('employees', 'canCreate'), employeeController.createEmployee);
 router.patch('/:id/schedule-color', checkPermission('employees', 'canUpdate'), employeeController.updateScheduleColor);
+router.patch('/:id/reset-password', checkPermission('employees', 'canUpdate'), employeeController.resetEmployeePassword);
 router.put('/:id', checkPermission('employees', 'canUpdate'), employeeController.updateEmployee);
 router.delete('/:id', checkPermission('employees', 'canDelete'), employeeController.deleteEmployee);
 

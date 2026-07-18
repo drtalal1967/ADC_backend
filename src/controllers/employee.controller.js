@@ -37,6 +37,20 @@ const updateEmployee = async (req, res, next) => {
   }
 };
 
+const resetEmployeePassword = async (req, res, next) => {
+  try {
+    if (req.user?.role?.name !== 'ADMIN') {
+      return res.status(403).json({ message: 'Only Admin can reset employee passwords' });
+    }
+
+    const { password } = req.body;
+    const result = await employeeService.resetEmployeePassword(req.params.id, password);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 const updateScheduleColor = async (req, res, next) => {
   try {
     const employee = await employeeService.updateScheduleColor(req.params.id, req.body.scheduleColor);
@@ -81,6 +95,7 @@ module.exports = {
   getEmployeeById,
   createEmployee,
   updateEmployee,
+  resetEmployeePassword,
   updateScheduleColor,
   deleteEmployee,
   getDentists,

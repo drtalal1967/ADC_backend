@@ -238,6 +238,27 @@ const updateEmployee = async (id, employeeData) => {
   return updatedEmployee;
 };
 
+const resetEmployeePassword = async (id, newPassword) => {
+  const empId = parseInt(id);
+  const employee = await prisma.employee.findUnique({
+    where: { id: empId },
+    include: { user: true }
+  });
+  if (!employee || !employee.userId) throw new Error('Employee user account not found');
+  if (!newPassword || String(newPassword).length < 6) throw new Error('Password must be at least 6 characters');
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.user.update({
+    where: { id: employee.userId },
+    data: {
+      passwordHash,
+      isActive: true
+    }
+  });
+
+  return { message: 'Password reset successfully' };
+};
+
 const updateScheduleColor = async (id, scheduleColor) => {
   return await prisma.employee.update({
     where: { id: parseInt(id) },
@@ -304,7 +325,13 @@ const getDentists = async () => {
       const clinicalText = `${emp.jobTitle || ''} ${emp.specialization || ''}`.toLowerCase();
       const isActiveEmployee = !hasEndDate(emp.endDate);
       const isDentistRole = roleName === 'DENTIST';
-      const isAdminDentist = roleName === 'ADMIN' && clinicalText.includes('dentist');
+      const identityText = `${emp.firstName || ''} ${emp.lastName || ''} ${emp.user?.email || ''}`.toLowerCase();
+      const isAdminDentist = roleName === 'ADMIN' && (
+        clinicalText.includes('dentist') ||
+        identityText.includes('talal') ||
+        identityText.includes('alalawi') ||
+        identityText.includes('alawi')
+      );
       return (isActiveEmployee && isDentistRole) || isAdminDentist;
     });
 
@@ -358,6 +385,7 @@ module.exports = {
   getEmployeeById,
   createEmployee,
   updateEmployee,
+  resetEmployeePassword,
   updateScheduleColor,
   deleteEmployee,
   getDentists,
