@@ -320,20 +320,35 @@ const getDentists = async () => {
         ]
     });
 
-    const dentists = employees.filter(emp => {
-      const roleName = emp.user?.role?.name || '';
-      const clinicalText = `${emp.jobTitle || ''} ${emp.specialization || ''}`.toLowerCase();
-      const isActiveEmployee = !hasEndDate(emp.endDate);
-      const isDentistRole = roleName === 'DENTIST';
-      const identityText = `${emp.firstName || ''} ${emp.lastName || ''} ${emp.user?.email || ''}`.toLowerCase();
-      const isAdminDentist = roleName === 'ADMIN' && (
-        clinicalText.includes('dentist') ||
-        identityText.includes('talal') ||
-        identityText.includes('alalawi') ||
-        identityText.includes('alawi')
-      );
-      return (isActiveEmployee && isDentistRole) || isAdminDentist;
-    });
+    const dentistOrder = ['talal', 'munther', 'yusuf', 'alaeddine'];
+
+    const dentists = employees
+      .filter(emp => {
+        const roleName = emp.user?.role?.name || '';
+        const clinicalText = `${emp.jobTitle || ''} ${emp.specialization || ''}`.toLowerCase();
+        const displayName = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+        const identityText = `${displayName} ${emp.user?.email || ''}`.toLowerCase();
+        const isActiveEmployee = !hasEndDate(emp.endDate);
+        const isPlaceholderAdmin = /^admin\s*\.?\s*(user)?$/i.test(displayName);
+        const isDentistRole = roleName === 'DENTIST';
+        const isAdminDentist = roleName === 'ADMIN' && !isPlaceholderAdmin && (
+          clinicalText.includes('dentist') ||
+          identityText.includes('talal') ||
+          identityText.includes('alalawi') ||
+          identityText.includes('alawi')
+        );
+        return !isPlaceholderAdmin && ((isActiveEmployee && isDentistRole) || isAdminDentist);
+      })
+      .sort((a, b) => {
+        const aText = `${a.firstName || ''} ${a.lastName || ''}`.toLowerCase();
+        const bText = `${b.firstName || ''} ${b.lastName || ''}`.toLowerCase();
+        const aRank = dentistOrder.findIndex(name => aText.includes(name));
+        const bRank = dentistOrder.findIndex(name => bText.includes(name));
+        const normalizedARank = aRank === -1 ? dentistOrder.length : aRank;
+        const normalizedBRank = bRank === -1 ? dentistOrder.length : bRank;
+        if (normalizedARank !== normalizedBRank) return normalizedARank - normalizedBRank;
+        return aText.localeCompare(bText);
+      });
 
     return dentists.map(emp => ({
       ...emp,
