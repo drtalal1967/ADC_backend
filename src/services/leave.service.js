@@ -8,6 +8,7 @@ const LEAVE_TYPES = [
 ];
 
 const SICK_LEAVE_YEARLY_DAYS = 15;
+const UNLIMITED_LEAVE_TYPES = new Set(['RELATIVES_DEATH']);
 const BAHRAIN_TIME_ZONE = 'Asia/Bahrain';
 
 const getBahrainDateParts = (value = new Date()) => {
@@ -98,8 +99,7 @@ const pivotBalances = (balances, employee) => {
     // Default values
     annual: { total: 30, used: 0, remaining: 30 },
     sick: { total: 15, used: 0, remaining: 15 },
-    relativesDeath: { total: 3, used: 0, remaining: 3 },
-    hajj: { total: 10, used: 0, remaining: 10 },
+        hajj: { total: 10, used: 0, remaining: 10 },
     marriage: { total: 15, used: 0, remaining: 15 },
     others: { total: 5, used: 0, remaining: 5 },
     maternity: { total: 60, used: 0, remaining: 60 }
@@ -157,7 +157,7 @@ const updateEmployeeBalances = async (employeeId, editData, user) => {
   const eid = parseInt(employeeId);
   const roleName = (user?.role?.name || '').toUpperCase();
   const annualKeys = ['annual'];
-  const manualKeys = ['sick', 'relativesDeath', 'hajj', 'marriage', 'others', 'maternity'];
+  const manualKeys = ['sick', 'hajj', 'marriage', 'others', 'maternity'];
 
   const canEditAnnual = roleName === 'ADMIN';
   const canEditManualLeaves = ['ADMIN', 'SECRETARY'].includes(roleName);
@@ -249,9 +249,9 @@ const applyLeave = async (leaveData) => {
     },
   });
 
-  if (!balance) {
+  if (!balance && !UNLIMITED_LEAVE_TYPES.has(String(data.leaveType || '').toUpperCase())) {
     // If not exists, check if it's one of our standard types to create initial record
-    const defaultAllotment = { ANNUAL: 30, SICK: 15, RELATIVES_DEATH: 3, HAJJ: 10, MARRIAGE: 15, MATERNITY: 60, OTHERS: 5 }[data.leaveType] || 0;
+    const defaultAllotment = { ANNUAL: 30, SICK: 15, HAJJ: 10, MARRIAGE: 15, MATERNITY: 60, OTHERS: 5 }[data.leaveType] || 0;
     balance = await prisma.leaveBalance.create({
       data: {
         employeeId: parseInt(employeeId),
@@ -303,43 +303,45 @@ const updateLeaveStatus = async (id, statusData) => {
         throw new Error('Leave approval is disabled for part-time employees');
       }
 
-      const year = leaveRequest.startDate.getFullYear();
-      const balance = await tx.leaveBalance.findUnique({
-        where: {
-          employeeId_leaveType_year: {
-            employeeId: leaveRequest.employeeId,
-            leaveType: leaveRequest.leaveType,
-            year,
-          },
-        },
-      });
 
-      if (balance) {
-        const chargeableDays = await calculateChargeableLeaveDays(
-          normalizeLeaveDate(leaveRequest.startDate),
-          normalizeLeaveDate(leaveRequest.endDate)
-        );
+      const leaveType = String(leaveRequest.leaveType || '').toUpperCase();
+      const chargeableDays = await calculateChargeableLeaveDays(
+        normalizeLeaveDate(leaveRequest.startDate),
+        normalizeLeaveDate(leaveRequest.endDate)
+      );
 
-        const leaveType = String(leaveRequest.leaveType || '').toUpperCase();
-        if (leaveType !== 'ANNUAL' && balance.totalRemaining < chargeableDays) {
-          throw new Error('Insufficient balance to approve this request');
-        }
-        await tx.leaveBalance.update({
-          where: { id: balance.id },
-          data: {
-            totalUsed: balance.totalUsed + chargeableDays,
-            totalRemaining: balance.totalRemaining - chargeableDays,
+      if (Number(leaveRequest.totalDays) !== chargeableDays) {
+        await tx.leaveRequest.update({
+          where: { id: leaveRequestId },
+          data: { totalDays: chargeableDays },
+        });
+      }
+
+      if (!UNLIMITED_LEAVE_TYPES.has(leaveType)) {
+        const year = leaveRequest.startDate.getFullYear();
+        const balance = await tx.leaveBalance.findUnique({
+          where: {
+            employeeId_leaveType_year: {
+              employeeId: leaveRequest.employeeId,
+              leaveType: leaveRequest.leaveType,
+              year,
+            },
           },
         });
 
-        if (Number(leaveRequest.totalDays) !== chargeableDays) {
-          await tx.leaveRequest.update({
-            where: { id: leaveRequestId },
-            data: { totalDays: chargeableDays },
+        if (balance) {
+          if (leaveType !== 'ANNUAL' && balance.totalRemaining < chargeableDays) {
+            throw new Error('Insufficient balance to approve this request');
+          }
+          await tx.leaveBalance.update({
+            where: { id: balance.id },
+            data: {
+              totalUsed: balance.totalUsed + chargeableDays,
+              totalRemaining: balance.totalRemaining - chargeableDays,
+            },
           });
         }
-      }
-    }
+      }    }
 
     await tx.leaveRequest.update({
       where: { id: leaveRequestId },
@@ -505,7 +507,8 @@ const deleteLeaveRequest = async (id, user) => {
       }
     }
 
-    if (leaveRequest.status === 'APPROVED') {
+
+    if (leaveRequest.status === 'APPROVED' && !UNLIMITED_LEAVE_TYPES.has(String(leaveRequest.leaveType || '').toUpperCase())) {
       const year = leaveRequest.startDate.getFullYear();
       const balance = await tx.leaveBalance.findUnique({
         where: {
@@ -527,7 +530,6 @@ const deleteLeaveRequest = async (id, user) => {
         });
       }
     }
-
     return tx.leaveRequest.delete({
       where: { id: leaveRequestId },
     });
