@@ -57,7 +57,8 @@ const login = async (email, password) => {
       branch,
       avatar,
       profileImage: user.employee?.profileImageUrl,
-      employeeId: user.employee?.id
+      employeeId: user.employee?.id,
+      employmentType: user.employee?.employmentType || 'FULL_TIME'
     },
     token,
   };

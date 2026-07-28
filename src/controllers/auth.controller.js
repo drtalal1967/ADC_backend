@@ -25,6 +25,7 @@ const getMe = async (req, res, next) => {
       role: req.user.role?.name || 'SECRETARY',
       permissions: req.user.role?.permissions || [],
       employeeId: req.user.employee?.id,
+      employmentType: req.user.employee?.employmentType || 'FULL_TIME',
       name: req.user.employee ? `${req.user.employee.firstName} ${req.user.employee.lastName}` : 'System User',
       profileImage: req.user.employee?.profileImageUrl,
     };

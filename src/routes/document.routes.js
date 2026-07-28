@@ -45,13 +45,11 @@ const canUploadDocument = async (req, res, next) => {
     const ownEmployeeId = Number(req.user?.employee?.id || req.user?.employeeId);
     const isAdmin = roleName === 'ADMIN';
     const isOwner = Number(leaveRequest.employeeId) === ownEmployeeId;
-    const isSickLeave = String(leaveRequest.leaveType || '').toUpperCase().includes('SICK');
-
-    if (isSickLeave && (isAdmin || isOwner)) {
+    if (isAdmin || isOwner) {
       return next();
     }
 
-    return res.status(403).json({ message: 'Only Admin and the employee can upload sick leave certificates' });
+    return res.status(403).json({ message: 'Only Admin and the employee can upload leave attachments' });
   }
 
   if (req.body.vendorId || category.includes('vendor') || (skipDb && title.includes('vendor'))) {
@@ -85,8 +83,43 @@ const canUploadDocument = async (req, res, next) => {
   return res.status(403).json({ message: 'Permission denied for document upload' });
 };
 
+const canDeleteDocument = async (req, res, next) => {
+  try {
+    const document = await prisma.document.findUnique({
+      where: { id: parseInt(req.params.id, 10) },
+      include: {
+        leaveRequest: {
+          select: { id: true, employeeId: true, leaveType: true },
+        },
+      },
+    });
+
+    if (!document) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+
+    if (document.leaveRequestId) {
+      const roleName = String(req.user?.role?.name || '').toUpperCase();
+      const ownEmployeeId = Number(req.user?.employee?.id || req.user?.employeeId);
+      const isAdmin = roleName === 'ADMIN';
+      const isOwner = Number(document.leaveRequest?.employeeId) === ownEmployeeId;
+
+      if (isAdmin || isOwner) {
+        return next();
+      }
+    }
+
+    if (hasPermission(req.user, 'documents', ['delete'])) {
+      return next();
+    }
+
+    return res.status(403).json({ message: 'Permission denied for document delete' });
+  } catch (error) {
+    next(error);
+  }
+};
 router.get('/', checkPermission('documents', 'canView'), documentController.getAllDocuments);
 router.post('/upload', upload.single('file'), canUploadDocument, documentController.uploadDocument);
-router.delete('/:id', checkPermission('documents', 'canDelete'), documentController.deleteDocument);
+router.delete('/:id', canDeleteDocument, documentController.deleteDocument);
 
 module.exports = router;
