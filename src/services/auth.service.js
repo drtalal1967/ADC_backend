@@ -15,7 +15,7 @@ const login = async (email, password) => {
     },
   });
 
-  if (!user || !(await comparePassword(password, user.passwordHash))) {
+  if (!user || !(await comparePassword(String(password || ''), user.passwordHash))) {
     throw new Error('Invalid email or password');
   }
 
@@ -87,3 +87,4 @@ module.exports = {
   login,
   changePassword,
 };
+

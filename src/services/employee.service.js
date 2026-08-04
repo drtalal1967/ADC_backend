@@ -240,25 +240,40 @@ const updateEmployee = async (id, employeeData) => {
 
 const resetEmployeePassword = async (id, newPassword) => {
   const empId = parseInt(id);
+  const password = String(newPassword || '').trim();
   const employee = await prisma.employee.findUnique({
     where: { id: empId },
     include: { user: true }
   });
-  if (!employee || !employee.userId) throw new Error('Employee user account not found');
-  if (!newPassword || String(newPassword).length < 6) throw new Error('Password must be at least 6 characters');
+  if (!employee || !employee.userId || !employee.user) throw new Error('Employee user account not found');
+  if (password.length < 6) throw new Error('Password must be at least 6 characters');
 
-  const passwordHash = await hashPassword(newPassword);
-  await prisma.user.update({
-    where: { id: employee.userId },
-    data: {
-      passwordHash,
-      isActive: true
-    }
-  });
+  const passwordHash = await hashPassword(password);
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: employee.userId },
+      data: {
+        passwordHash,
+        isActive: true,
+        email: String(employee.user.email || '').trim().toLowerCase()
+      }
+    }),
+    prisma.employee.update({
+      where: { id: empId },
+      data: {
+        status: 'ACTIVE',
+        endDate: null
+      }
+    })
+  ]);
 
-  return { message: 'Password reset successfully' };
+  return {
+    message: 'Password reset successfully',
+    employeeId: empId,
+    userId: employee.userId,
+    email: String(employee.user.email || '').trim().toLowerCase()
+  };
 };
-
 const updateScheduleColor = async (id, scheduleColor) => {
   return await prisma.employee.update({
     where: { id: parseInt(id) },
@@ -406,3 +421,4 @@ module.exports = {
   getDentists,
   importEmployees
 };
+
