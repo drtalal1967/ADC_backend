@@ -381,9 +381,15 @@ const updateLeaveStatus = async (id, statusData) => {
   if (updatedRequest && ['APPROVED', 'REJECTED'].includes(updatedRequest.status)) {
     const employeeEmail = updatedRequest.employee?.user?.email;
     if (employeeEmail) {
-      sendLeaveStatusEmail(employeeEmail, updatedRequest, 'info@alawidental.com').catch(err => {
+      sendLeaveStatusEmail(employeeEmail, updatedRequest, 'info@alawidental.com').then(sent => {
+        if (!sent) {
+          console.warn(`[Leave] Status notification was not sent for leave request ${updatedRequest.id} to ${employeeEmail}`);
+        }
+      }).catch(err => {
         console.error('[Leave] Failed to send status notification:', err.message);
       });
+    } else {
+      console.warn(`[Leave] Status notification skipped for leave request ${updatedRequest.id}: employee email is missing`);
     }
   }
 
@@ -575,4 +581,5 @@ module.exports = {
   deleteLeaveRequest,
   deleteLeaveBalance
 };
+
 
