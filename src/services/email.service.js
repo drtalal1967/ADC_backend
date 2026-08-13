@@ -1,5 +1,13 @@
 const nodemailer = require('nodemailer');
 
+const SYSTEM_FROM_EMAIL = 'info@alawidental.com';
+const SYSTEM_FROM_NAME = 'Al-Alawi Dental Center';
+const getSmtpUser = () => {
+  const configuredUser = process.env.SMTP_USER || SYSTEM_FROM_EMAIL;
+  return configuredUser.replace(/^reminders@alawidental\.com$/i, SYSTEM_FROM_EMAIL);
+};
+const getSystemFrom = () => `"${SYSTEM_FROM_NAME}" <${SYSTEM_FROM_EMAIL}>`;
+
 // Create SSL transporter using client's SMTP credentials
 const createTransporter = () => {
   return nodemailer.createTransport({
@@ -8,7 +16,7 @@ const createTransporter = () => {
     secure: true, // Port 465 = SSL/TLS
     name: 'alawidental.com', // Fix EHLO for localhost originating emails
     auth: {
-      user: process.env.SMTP_USER,
+      user: getSmtpUser(),
       pass: process.env.SMTP_PASS,
     },
     tls: {
@@ -145,7 +153,7 @@ const sendReminderEmail = async (to, reminder) => {
             <td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
               <p style="margin:0;font-size:11px;color:#94a3b8;text-align:center;">
                 This is an automated reminder from <strong>Al-Alawi Dental Center System</strong>.<br/>
-                Sent from: ${process.env.SMTP_FROM}
+                Sent from: ${SYSTEM_FROM_EMAIL}
               </p>
             </td>
           </tr>
@@ -158,7 +166,7 @@ const sendReminderEmail = async (to, reminder) => {
 </html>`;
 
     await transporter.sendMail({
-      from: `"Al-Alawi Dental Center" <${process.env.SMTP_FROM}>`,
+      from: `"Al-Alawi Dental Center" <${SYSTEM_FROM_EMAIL}>`,
       to,
       subject: `Reminder: ${title} - Due ${dueDate}`,
       html: htmlBody,
@@ -285,7 +293,7 @@ const sendLeaveRequestSubmittedEmail = async (to, leaveRequest) => {
     });
 
     await transporter.sendMail({
-      from: `"Al-Alawi Dental Center" <${process.env.SMTP_FROM || 'info@alawidental.com'}>`,
+      from: getSystemFrom(),
       to,
       subject: `New leave request from ${employeeName}`,
       html,
@@ -320,7 +328,7 @@ const sendLeaveStatusEmail = async (to, leaveRequest, cc) => {
     });
 
     await transporter.sendMail({
-      from: `"Al-Alawi Dental Center" <${process.env.SMTP_FROM || 'info@alawidental.com'}>`,
+      from: getSystemFrom(),
       to,
       cc,
       subject: `Leave request ${statusText}`,
@@ -381,7 +389,7 @@ const sendWorkScheduleEmail = async ({ to, employeeName, startDate, endDate, pdf
 </html>`;
 
     await transporter.sendMail({
-      from: `"Al-Alawi Dental Center" <${process.env.SMTP_FROM || 'info@alawidental.com'}>`,
+      from: getSystemFrom(),
       to,
       subject: `Work Schedule - ${subjectRange}`,
       html,
