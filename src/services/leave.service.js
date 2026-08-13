@@ -1,6 +1,20 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { sendLeaveRequestSubmittedEmail, sendLeaveStatusEmail } = require('./email.service');
+const getLeaveRequestNotificationRecipients = () => {
+  const configured = process.env.LEAVE_REQUEST_NOTIFY_TO || process.env.SMTP_ADMIN || '';
+  const recipients = configured
+    .split(',')
+    .map(email => email.trim())
+    .filter(Boolean);
+
+  if (!recipients.some(email => email.toLowerCase() === 'drtalal@alawidental.com')) {
+    recipients.unshift('drtalal@alawidental.com');
+  }
+
+  return [...new Set(recipients.map(email => email.toLowerCase()))].join(',');
+};
+
 
 const LEAVE_TYPES = [
   'ANNUAL', 'SICK', 'RELATIVES_DEATH', 'HAJJ', 'MARRIAGE', 'OTHERS',
@@ -274,7 +288,12 @@ const applyLeave = async (leaveData) => {
     include: { employee: { include: { user: true } }, documents: true },
   });
 
-  sendLeaveRequestSubmittedEmail('drtalal@alawidental.com', leaveRequest).catch(err => {
+  const notificationRecipients = getLeaveRequestNotificationRecipients();
+  sendLeaveRequestSubmittedEmail(notificationRecipients, leaveRequest).then(sent => {
+    if (!sent) {
+      console.warn(`[Leave] Submitted notification was not sent for leave request ${leaveRequest.id}`);
+    }
+  }).catch(err => {
     console.error('[Leave] Failed to send submitted notification:', err.message);
   });
 
@@ -556,3 +575,4 @@ module.exports = {
   deleteLeaveRequest,
   deleteLeaveBalance
 };
+
