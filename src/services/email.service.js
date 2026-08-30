@@ -78,7 +78,7 @@ const sendReminderEmail = async (to, reminder) => {
                 <tr>
                   <td>
                     <p style="margin:0;color:rgba(255,255,255,0.7);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;">Al-Alawi Dental Center</p>
-                    <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;font-weight:800;">🔔 Reminder Notification</h1>
+                    <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;font-weight:800;">Reminder Notification</h1>
                   </td>
                   <td align="right">
                     <span style="display:inline-block;background:${severityColor};color:#ffffff;font-size:10px;font-weight:900;letter-spacing:1.5px;padding:4px 12px;border-radius:20px;text-transform:uppercase;">${severityLabel}</span>
@@ -103,12 +103,12 @@ const sendReminderEmail = async (to, reminder) => {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td width="48%" style="background:#f8fafc;border-radius:12px;padding:16px;border:1px solid #e2e8f0;">
-                    <p style="margin:0 0 6px;font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:1px;text-transform:uppercase;">📅 Due Date</p>
+                    <p style="margin:0 0 6px;font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Due Date</p>
                     <p style="margin:0;font-size:15px;color:#1e293b;font-weight:800;">${dueDate}</p>
                   </td>
                   <td width="4%"></td>
                   <td width="48%" style="background:#f8fafc;border-radius:12px;padding:16px;border:1px solid #e2e8f0;">
-                    <p style="margin:0 0 6px;font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:1px;text-transform:uppercase;">🔔 Notify On</p>
+                    <p style="margin:0 0 6px;font-size:10px;color:#94a3b8;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Notify On</p>
                     <p style="margin:0;font-size:15px;color:#1e293b;font-weight:800;">${notifyDate}</p>
                   </td>
                 </tr>
@@ -120,7 +120,7 @@ const sendReminderEmail = async (to, reminder) => {
           ${reminder.branch && reminder.branch !== 'All Branches' ? `
           <tr>
             <td style="padding:0 32px 16px;">
-              <p style="margin:0;font-size:12px;color:#64748b;font-weight:600;">🏢 Branch: <strong>${reminder.branch}</strong></p>
+              <p style="margin:0;font-size:12px;color:#64748b;font-weight:600;">Branch: <strong>${reminder.branch}</strong></p>
             </td>
           </tr>` : ''}
 
@@ -140,7 +140,7 @@ const sendReminderEmail = async (to, reminder) => {
           <tr>
             <td style="padding:0 32px 24px;">
               <div style="background:#ffffff;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;">
-                <p style="margin:0 0 12px;font-size:13px;color:#475569;font-weight:700;">📎 An important document is attached</p>
+                <p style="margin:0 0 12px;font-size:13px;color:#475569;font-weight:700;">An important document is attached</p>
                 <a href="${reminder.attachmentUrl}" target="_blank" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;letter-spacing:0.5px;padding:12px 28px;border-radius:6px;box-shadow:0 4px 6px rgba(37,99,235,0.2);">
                   View Attached Document
                 </a>
@@ -307,6 +307,36 @@ const sendLeaveRequestSubmittedEmail = async (to, leaveRequest) => {
   }
 };
 
+const sendLeaveRequestCancelledEmail = async (to, leaveRequest) => {
+  try {
+    if (!to) return false;
+    const transporter = createTransporter();
+    const employeeName = getLeaveEmployeeName(leaveRequest);
+    const cancelledRequest = { ...leaveRequest, status: 'CANCELLED' };
+    const html = buildLeaveEmailHtml({
+      title: 'Leave Request Cancelled',
+      eyebrow: 'Request Cancelled',
+      intro: `<strong>${escapeHtml(employeeName)}</strong> cancelled a pending leave request before approval.`,
+      badgeText: 'Cancelled',
+      badgeColor: '#dc2626',
+      leaveRequest: cancelledRequest,
+    });
+
+    await transporter.sendMail({
+      from: getSystemFrom(),
+      to,
+      subject: `Leave request cancelled by ${employeeName}`,
+      html,
+    });
+
+    console.log(`[Email] Sent leave cancellation notification to ${to}`);
+    return true;
+  } catch (err) {
+    console.error(`[Email] Failed to send leave cancellation notification to ${to}:`, err.message);
+    return false;
+  }
+};
+
 const sendLeaveStatusEmail = async (to, leaveRequest, cc) => {
   try {
     if (!to) return false;
@@ -408,4 +438,4 @@ const sendWorkScheduleEmail = async ({ to, employeeName, startDate, endDate, pdf
   }
 };
 
-module.exports = { sendReminderEmail, sendLeaveRequestSubmittedEmail, sendLeaveStatusEmail, sendWorkScheduleEmail };
+module.exports = { sendReminderEmail, sendLeaveRequestSubmittedEmail, sendLeaveRequestCancelledEmail, sendLeaveStatusEmail, sendWorkScheduleEmail };

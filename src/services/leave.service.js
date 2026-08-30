@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { sendLeaveRequestSubmittedEmail, sendLeaveStatusEmail } = require('./email.service');
+const { sendLeaveRequestSubmittedEmail, sendLeaveRequestCancelledEmail, sendLeaveStatusEmail } = require('./email.service');
 const getLeaveRequestNotificationRecipients = () => {
   const configured = process.env.LEAVE_REQUEST_NOTIFY_TO || process.env.SMTP_ADMIN || '';
   const recipients = configured
@@ -510,10 +510,12 @@ const deleteLeaveRequest = async (id, user) => {
   const roleName = (user?.role?.name || '').toUpperCase();
   const isAdmin = roleName === 'ADMIN';
   const userEmployeeId = user?.employee?.id || user?.employeeId;
+  let shouldNotifyCancellation = false;
 
-  return await prisma.$transaction(async (tx) => {
+  const deletedRequest = await prisma.$transaction(async (tx) => {
     const leaveRequest = await tx.leaveRequest.findUnique({
       where: { id: leaveRequestId },
+      include: { employee: true },
     });
 
     if (!leaveRequest) throw new Error('Leave request not found');
@@ -530,6 +532,8 @@ const deleteLeaveRequest = async (id, user) => {
         err.status = 403;
         throw err;
       }
+
+      shouldNotifyCancellation = true;
     }
 
 
@@ -557,10 +561,23 @@ const deleteLeaveRequest = async (id, user) => {
     }
     return tx.leaveRequest.delete({
       where: { id: leaveRequestId },
+      include: { employee: true },
     });
   });
-};
 
+  if (shouldNotifyCancellation) {
+    const notificationRecipients = getLeaveRequestNotificationRecipients();
+    sendLeaveRequestCancelledEmail(notificationRecipients, deletedRequest).then(sent => {
+      if (!sent) {
+        console.warn(`[Leave] Cancellation notification was not sent for leave request ${deletedRequest.id}`);
+      }
+    }).catch(err => {
+      console.error('[Leave] Failed to send cancellation notification:', err.message);
+    });
+  }
+
+  return deletedRequest;
+};
 const deleteLeaveBalance = async (employeeId) => {
   const eid = parseInt(employeeId);
   const year = new Date().getFullYear();
