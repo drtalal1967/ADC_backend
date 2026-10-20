@@ -355,8 +355,8 @@ const updateLeaveStatus = async (id, statusData) => {
           await tx.leaveBalance.update({
             where: { id: balance.id },
             data: {
-              totalUsed: balance.totalUsed + chargeableDays,
-              totalRemaining: balance.totalRemaining - chargeableDays,
+              totalUsed: { increment: chargeableDays },
+              totalRemaining: { decrement: chargeableDays },
             },
           });
         }
@@ -396,33 +396,13 @@ const updateLeaveStatus = async (id, statusData) => {
   return updatedRequest;
 };
 
-const runMonthlyAutoUpdate = async (referenceDate = new Date()) => {
-  const year = getBahrainDateParts(referenceDate).year;
-  const employees = await prisma.employee.findMany({ where: { status: 'ACTIVE', employmentType: 'FULL_TIME' } });
-
-  console.log(`Running monthly annual leave increment for ${employees.length} employees...`);
-
-  await prisma.$transaction(async (tx) => {
-    for (const emp of employees) {
-      const annual = await tx.leaveBalance.findUnique({
-        where: { employeeId_leaveType_year: { employeeId: emp.id, leaveType: 'ANNUAL', year } }
-      });
-
-      if (annual) {
-        await tx.leaveBalance.update({
-          where: { id: annual.id },
-          data: {
-            totalAllotted: annual.totalAllotted + 2.5,
-            totalRemaining: annual.totalRemaining + 2.5
-          }
-        });
-      } else {
-        await tx.leaveBalance.create({
-          data: { employeeId: emp.id, leaveType: 'ANNUAL', year, totalAllotted: 2.5, totalRemaining: 2.5 }
-        });
-      }
-    }
-  });
+const { createMonthlyAccrual } = require('./monthlyAccrual.service');
+const accrueCurrentMonth = createMonthlyAccrual(prisma);
+const runMonthlyAutoUpdate = async () => {
+  if (process.env.ANNUAL_ACCRUAL_ENABLED !== 'true') {
+    return { skipped: 'disabled', credited: 0 };
+  }
+  return accrueCurrentMonth();
 };
 
 const runYearlySickLeaveUpdate = async (referenceDate = new Date()) => {
@@ -554,7 +534,7 @@ const deleteLeaveRequest = async (id, user) => {
           where: { id: balance.id },
           data: {
             totalUsed: Math.max(0, balance.totalUsed - leaveRequest.totalDays),
-            totalRemaining: balance.totalRemaining + leaveRequest.totalDays,
+            totalRemaining: { increment: leaveRequest.totalDays },
           },
         });
       }

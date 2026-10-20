@@ -7,8 +7,8 @@ const initCron = () => {
   // ─── 1. Monthly Leave Auto-Update (1st of every month at 00:00) ───
   cron.schedule('0 0 1 * *', async () => {
     try {
-      await leaveService.runMonthlyAutoUpdate();
-      console.log('Cron: Monthly leave update completed.');
+      const result = await leaveService.runMonthlyAutoUpdate();
+      console.log('Cron: Monthly leave update checked.', result);
     } catch (error) {
       console.error('Cron Error: Monthly leave update failed:', error);
     }

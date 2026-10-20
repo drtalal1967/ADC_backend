@@ -83,8 +83,8 @@ const updateEmployeeBalances = async (req, res, next) => {
 
 const runMonthlyUpdate = async (req, res, next) => {
   try {
-    await leaveService.runMonthlyAutoUpdate();
-    res.json({ message: 'Monthly leave update completed successfully' });
+    const result = await leaveService.runMonthlyAutoUpdate();
+    res.json({ message: 'Monthly leave update checked', ...result });
   } catch (error) {
     next(error);
   }

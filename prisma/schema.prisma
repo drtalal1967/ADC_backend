@@ -212,6 +212,7 @@ model Employee {
   schedules     Schedule[]
   leaveRequests LeaveRequest[]
   leaveBalances LeaveBalance[]
+  annualLeaveCredits AnnualLeaveCredit[]
   documents     Document[]
 
   @@map("employees")
@@ -547,4 +548,17 @@ model MonthlyFinancial {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("monthly_financials")
+}
+
+// Append-only monthly grants. Restrict employee deletion to retain the audit trail.
+model AnnualLeaveCredit {
+  id         Int      @id @default(autoincrement())
+  employeeId Int      @map("employee_id")
+  month      String   @db.Char(7)
+  days       Decimal  @db.Decimal(4, 1)
+  createdAt  DateTime @default(now()) @map("created_at")
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, month], map: "annual_leave_credit_employee_month")
+  @@map("annual_leave_credits")
 }

@@ -9,7 +9,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "db:migrate": "npx prisma migrate dev",
     "db:generate": "npx prisma generate",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "test:accrual": "node --test test/accrual.test.js",
+    "build": "prisma generate"
   },
   "keywords": [],
   "author": "",
