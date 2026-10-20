@@ -144,6 +144,14 @@ const sendScheduleEmails = async (req, res, next) => {
 };
 
 module.exports = {
+  getScheduleAbsences: async (req, res, next) => {
+    try {
+      res.json(await scheduleService.getScheduleAbsences(req.query));
+    } catch (error) {
+      if (error.statusCode === 400) return res.status(400).json({ message: error.message });
+      next(error);
+    }
+  },
   createSchedule,
   createManySchedules,
   getSchedules,

@@ -540,6 +540,7 @@ const sendScheduleEmails = async (payload = {}) => {
 };
 
 module.exports = {
+  getScheduleAbsences: query => require('./scheduleAvailability.service').getScheduleAbsences(prisma, query),
   createSchedule,
   createManySchedules,
   getSchedules,

@@ -5,6 +5,10 @@ const { authMiddleware, checkPermission, checkAnyPermission } = require('../midd
 const router = express.Router();
 
 router.use(authMiddleware);
+router.get('/absences', checkAnyPermission([
+  { module: 'schedule', action: 'view' },
+  { module: 'work_schedule', action: 'view' },
+]), scheduleController.getScheduleAbsences);
 
 router.get('/', checkAnyPermission([
   { module: 'schedule', action: 'view' },
